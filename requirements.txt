@@ -1,0 +1,8 @@
+tonic
+pandas
+torch # install cuda own your own
+snntorch
+rich
+matplotlib
+nir
+nirtorch
