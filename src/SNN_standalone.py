@@ -138,11 +138,11 @@ for epoch in range(num_epochs):
 
 # Export to NIR and add example data and output
 # TODO NIR Export not working at the moment
-# print(data[0].shape)
-# print(targets[0].shape)
-# print(spk_rec[0].shape)
-# nir_graph = export_to_nir(net.cpu(), sample_data=torch.randn(1, 2, 34, 34))
-# nir.write(filename="example.nir", graph=nir_graph)
+print(data[0].shape)
+print(targets[0].shape)
+print(spk_rec[0].shape)
+nir_graph = export_to_nir(net.cpu(), sample_data=torch.randn(1, 2, 34, 34).cpu())
+nir.write(filename="example.nir", graph=nir_graph)
 
 # Plot Loss
 fig = plt.figure(facecolor="w")
