@@ -1,6 +1,7 @@
 """Local server that trains the model among all clients"""
 from omegaconf import DictConfig
 from ray import client
+from hydra.utils import instantiate
 
 from FL.CNN import Net,test
 from collections import OrderedDict
@@ -9,12 +10,13 @@ def get_on_fit_config(config: DictConfig):
     def fit_config_function(server_round: int):
         #if server_round == 50: #Example on how we can manimulate learning rate in later stage
         #    lr = config.lr/10
-        return {'lr': config.client.lr,'momentum':config.client.momentum,'local_epochs':config.client.local_epochs}
+       # return {'lr': config.client.lr,'momentum':config.client.momentum,'local_epochs':config.client.local_epochs}
+        return {'lr': config.lr, 'momentum': config.momentum, 'local_epochs': config.local_epochs}
     return fit_config_function
 
-def get_evaluate_fn(num_classes: int,testLoader):
+def get_evaluate_fn(model_cfg,testLoader):
     def evaluate_fn(server_round: int, parameters, config):
-        model = Net(num_classes)
+        model = instantiate(model_cfg)
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         #device = torch.device("cpu")
         #dictionary = model.state_dict()

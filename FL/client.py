@@ -70,15 +70,15 @@ import flwr as fl
 from flwr.common import NDArrays,Scalar
 import torch
 from collections import OrderedDict
-from FL.CNN import Net,train,test
-
+from FL.CNN import train,test
+from hydra.utils import instantiate
 # from model import Net, train, test
 class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, trainloader, valloader, num_class) -> None:
+    def __init__(self, trainloader, valloader, model_cfg) -> None:
         super().__init__()
         self.trainloader = trainloader
         self.valloader = valloader
-        self.model = Net(num_class)
+        self.model = instantiate(model_cfg)
         # run on GPU if available else CPU
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         #self.device = torch.device("cpu")
@@ -126,13 +126,13 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 # Returns a function that spawns a client in the main
-def generate_client_fn(trainloaders,valloaders,num_classes):
+def generate_client_fn(trainloaders,valloaders,model_cfg):
     """spawning clients for simulation"""
     def client_fn(clientID: str):
         print("client function with id ",clientID)
         return FlowerClient(
                             trainloader=trainloaders[int(clientID)],
                             valloader=valloaders[int(clientID)],
-                            num_class=num_classes).to_client()
+                            model_cfg=model_cfg).to_client()
     return client_fn
 

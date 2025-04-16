@@ -1,4 +1,5 @@
 #Main class to run federated learning
+from hydra.utils import instantiate
 from sympy import evaluate
 from Training import dataset
 import pickle
@@ -24,17 +25,20 @@ def main(cfg: DictConfig):
     print(len(trainLoaders),len(trainLoaders[0].dataset))
 
     #3. Define clients - allows to initialize clients
-    client_fn=generate_client_fn(trainLoaders,validationLoaders,cfg.client.num_classes)
+    client_fn=generate_client_fn(trainLoaders,validationLoaders,cfg.model)
     print("cfg num_rounds: ",cfg.fl.num_rounds,"cfg num classes",cfg.client.num_classes)
 
     #4. Define Strategy
-    strategy = fl.server.strategy.FedAvg(fraction_fit=0.00001,
-                                         min_fit_clients=cfg.client.num_clients_per_round_fit,
-                                         fraction_evaluate=0.00001,
-                                         min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
-                                         min_available_clients=cfg.fl.num_clients,
-                                         on_fit_config_fn=get_on_fit_config(cfg),
-                                         evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader)) #At the end of aggregation we obtain new global model and evaluate it
+    # strategy = fl.server.strategy.FedAvg(fraction_fit=0.00001,
+    #                                      min_fit_clients=cfg.client.num_clients_per_round_fit,
+    #                                      fraction_evaluate=0.00001,
+    #                                      min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
+    #                                      min_available_clients=cfg.fl.num_clients,
+    #                                      on_fit_config_fn=get_on_fit_config(cfg.client),
+    #                                      evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader)) #At the end of aggregation we obtain new global model and evaluate it
+    strategy = instantiate(cfg.strategy,
+                           evaluate_fn=get_evaluate_fn(cfg.model, testLoader)
+                           )
     #5. Run your simulation
     history =  fl.simulation.start_simulation(client_fn=client_fn,
                                               num_clients=cfg.fl.num_clients,
