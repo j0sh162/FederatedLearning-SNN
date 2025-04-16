@@ -1,20 +1,17 @@
 # Based on: https://ieeexplore.ieee.org/abstract/document/10242251
 # Adapted from: https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_7.html
 import matplotlib.pyplot as plt
-import nir
-import snntorch as snn
 import tonic
 import tonic.transforms as transforms
 import torch
-import torch.nn as nn
 import torchvision
 from rich import print
 from snntorch import functional as SF
-from snntorch import spikeplot as splt
-from snntorch import surrogate, utils
-from snntorch.export_nir import export_to_nir
-from tonic import DiskCachedDataset, MemoryCachedDataset
+from snntorch import surrogate
+from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader
+
+from FederatedSNN.SNN import SNN
 
 sensor_size = tonic.datasets.NMNIST.sensor_size
 
@@ -65,41 +62,20 @@ device = (
 )
 print(f"Using device: {device}")
 
-# neuron and simulation parameters
-spike_grad = surrogate.atan()
-beta = 0.5
+snn_net = SNN.Net(
+    input_shape=reversed(sensor_size),
+    num_hidden=None,
+    num_output=None,
+    spike_grad=surrogate.atan(),
+    beta=0.5,
+)
+snn_net.net.load_state_dict(torch.load("snn_net.pt", weights_only=True))
 
-#  Initialize Network
-net = nn.Sequential(
-    nn.Conv2d(2, 12, 5),
-    nn.MaxPool2d(2),
-    snn.Leaky(beta=beta, spike_grad=spike_grad, init_hidden=True),
-    nn.Conv2d(12, 32, 5),
-    nn.MaxPool2d(2),
-    snn.Leaky(beta=beta, spike_grad=spike_grad, init_hidden=True),
-    nn.Flatten(),
-    nn.Linear(32 * 5 * 5, 10),
-    snn.Leaky(beta=beta, spike_grad=spike_grad, init_hidden=True, output=True),
-).to(device)
-
-
-def forward_pass(net, data):
-    spk_rec = []
-    utils.reset(net)  # resets hidden states for all LIF neurons in net
-
-    for step in range(data.size(0)):  # data.size(0) = number of time steps
-        spk_out, mem_out = net(data[step])
-        spk_rec.append(spk_out)
-
-    return torch.stack(spk_rec)
-
-
-optimizer = torch.optim.Adam(net.parameters(), lr=2e-2, betas=(0.9, 0.999))
+optimizer = torch.optim.Adam(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
 
-
 num_epochs = 1
-num_iters = 1
+num_iters = 20
 num_batches = len(train_loader)
 
 loss_hist = []
@@ -111,8 +87,8 @@ for epoch in range(num_epochs):
         data = data.to(device)
         targets = targets.to(device)
 
-        net.train()
-        spk_rec = forward_pass(net, data)
+        snn_net.net.train()
+        spk_rec = snn_net.forward(data)
         loss_val = loss_fn(spk_rec, targets)
 
         # Gradient calculation + weight update
@@ -136,18 +112,12 @@ for epoch in range(num_epochs):
         if batch_number == num_iters:
             break
 
-# Export to NIR and add example data and output
-# TODO NIR Export not working at the moment
-print(data[0].shape)
-print(targets[0].shape)
-print(spk_rec[0].shape)
-nir_graph = export_to_nir(net.cpu(), sample_data=torch.randn(1, 2, 34, 34).cpu())
-nir.write(filename="example.nir", graph=nir_graph)
+torch.save(snn_net.net.state_dict(), "snn_net.pt")
 
 # Plot Loss
-fig = plt.figure(facecolor="w")
-plt.plot(acc_hist)
-plt.title("Train Set Accuracy")
-plt.xlabel("Iteration")
-plt.ylabel("Accuracy")
-plt.show()
+# fig = plt.figure(facecolor="w")
+# plt.plot(acc_hist)
+# plt.title("Train Set Accuracy")
+# plt.xlabel("Iteration")
+# plt.ylabel("Accuracy")
+# plt.show()
