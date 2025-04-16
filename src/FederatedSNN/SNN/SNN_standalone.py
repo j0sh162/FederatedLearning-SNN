@@ -1,25 +1,19 @@
 # Based on: https://ieeexplore.ieee.org/abstract/document/10242251
 # Adapted from: https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_7.html
 import matplotlib.pyplot as plt
-import nir
-import snntorch as snn
 import tonic
 import tonic.transforms as transforms
 import torch
-import torch.nn as nn
 import torchvision
 from rich import print
 from snntorch import functional as SF
-from snntorch import spikeplot as splt
-from snntorch import surrogate, utils
-from snntorch.export_nir import export_to_nir
-from tonic import DiskCachedDataset, MemoryCachedDataset
+from snntorch import surrogate
+from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader
 
 from FederatedSNN.SNN import SNN
 
 sensor_size = tonic.datasets.NMNIST.sensor_size
-sensor_size = tonic.datasets.CIFAR10DVS.sensor_size
 
 # Denoise removes isolated, one-off events
 # time_window
@@ -69,25 +63,13 @@ device = (
 print(f"Using device: {device}")
 
 snn_net = SNN.Net(
-    input_shape=None,
+    input_shape=reversed(sensor_size),
     num_hidden=None,
     num_output=None,
     spike_grad=surrogate.atan(),
     beta=0.5,
 )
-
-print("Sensor size:", sensor_size)
-print(snn_net.net)
-# Print the shape of tensors at each step in the nn.Sequential
-x_dummy = torch.randn(10, 2, 34, 34).to(device)  # Example input tensor
-print(f"Input shape: {x_dummy.shape}")
-
-for layer in snn_net.net:
-    x_dummy = layer(x_dummy)
-    if isinstance(x_dummy, tuple):  # Handle layers that return (spike, membrane)
-        x_dummy = x_dummy[0]
-    print(f"After {layer.__class__.__name__}: {x_dummy.shape}")
-quit()
+snn_net.net.load_state_dict(torch.load("snn_net.pt", weights_only=True))
 
 optimizer = torch.optim.Adam(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
@@ -130,20 +112,12 @@ for epoch in range(num_epochs):
         if batch_number == num_iters:
             break
 
-quit()
-
-# Export to NIR and add example data and output
-# TODO NIR Export not working at the moment
-print(data[0].shape)
-print(targets[0].shape)
-print(spk_rec[0].shape)
-nir_graph = export_to_nir(snn_net.cpu(), sample_data=torch.randn(1, 2, 34, 34).cpu())
-nir.write(filename="example.nir", graph=nir_graph)
+torch.save(snn_net.net.state_dict(), "snn_net.pt")
 
 # Plot Loss
-fig = plt.figure(facecolor="w")
-plt.plot(acc_hist)
-plt.title("Train Set Accuracy")
-plt.xlabel("Iteration")
-plt.ylabel("Accuracy")
-plt.show()
+# fig = plt.figure(facecolor="w")
+# plt.plot(acc_hist)
+# plt.title("Train Set Accuracy")
+# plt.xlabel("Iteration")
+# plt.ylabel("Accuracy")
+# plt.show()

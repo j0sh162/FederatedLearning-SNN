@@ -29,7 +29,7 @@ device = (
 class Net(nn.Module):
     def __init__(
         self,
-        input_shape: tuple = (34, 34, 2),
+        input_shape: tuple = (2, 34, 34),
         num_hidden: int = 1,
         num_output: int = 10,
         spike_grad=surrogate.atan(),
@@ -64,6 +64,8 @@ class Net(nn.Module):
         utils.reset(self.net)  # resets hidden states for all LIF neurons in net
 
         for step in range(x.size(0)):  # data.size(0) = number of time steps
+            # print("x shape", x.shape)
+            # print("x step", x[step].shape)
             spk_out, mem_out = self.net(x[step])
             spk_rec.append(spk_out)
 
