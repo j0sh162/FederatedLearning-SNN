@@ -1,23 +1,22 @@
-[build-system]
-requires = ["setuptools >= 77.0.3"]
-build-backend = "setuptools.build_meta"
-
+#All configurations for this project, simply run pip install -e .
+#it will from the root,read the pyproject.toml, install all listed dependencies
 [project]
-name = "FederatedSNN"
-version = "0.0.1"
+name = "FederatedLearning-SNN"
+description = "Federated learning with SNN methods using Flower and PyTorch"
+version="0.1.0"
 authors = [
-  { name="Example Author", email="author@example.com" },
+  { name="We can put our names"}
 ]
-description = "A small example package"
 readme = "README.md"
-requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+requires-python = ">=3.8" #we can change
+dependencies = [
+    "flwr[simulation]==1.4.0",
+    "flwr-datasets[vision]>=0.5.0",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "ray[default]",
+    "hydra-core"
 ]
-license = "MIT"
-license-files = ["LICENSE*"]
 
-[project.urls]
-Homepage = "https://github.com/j0sh162/FederatedLearning-SNN"
-Issues = "https://github.com/j0sh162/FederatedLearning-SNN/issues"
+[tool.setuptools]
+packages = ["FL", "SNN_Models","Training"]
