@@ -8,14 +8,20 @@ authors = [
   { name="We can put our names"}
 ]
 readme = "README.md"
-requires-python = ">=3.8" #we can change
+requires-python = ">=3.8,<3.13"
 dependencies = [
     "flwr[simulation]==1.4.0",
     "flwr-datasets[vision]>=0.5.0",
-    "torch==2.5.1",
-    "torchvision==0.20.1",
+    "torch",
+    "torchvision",
     "ray[default]",
-    "hydra-core"
+    "hydra-core",
+    "numpy<2.0.0",
+    "tonic",
+    "pandas",
+    "snntorch",
+    "rich",
+    "matplotlib",
 ]
 
 [tool.setuptools]

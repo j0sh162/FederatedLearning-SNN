@@ -11,7 +11,7 @@ from snntorch import surrogate
 from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader
 
-from FederatedSNN.SNN import SNN
+from SNN_Models import SNN
 
 sensor_size = tonic.datasets.NMNIST.sensor_size
 
