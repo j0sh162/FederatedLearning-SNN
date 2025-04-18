@@ -40,7 +40,8 @@ cached_trainset = MemoryCachedDataset(trainset, transform=transform)
 # no augmentations for the testset
 cached_testset = MemoryCachedDataset(testset)
 
-batch_size = 128
+# batch_size = 128
+batch_size = 2
 train_loader = DataLoader(
     cached_trainset,
     batch_size=batch_size,
@@ -69,7 +70,9 @@ snn_net = SNN.Net(
     spike_grad=surrogate.atan(),
     beta=0.5,
 )
-snn_net.net.load_state_dict(torch.load("snn_net.pt", weights_only=True))
+snn_net.net.load_state_dict(
+    torch.load("snn_net.pt", weights_only=True, map_location=device)
+)
 
 optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
