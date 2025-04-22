@@ -36,11 +36,13 @@ def get_evaluate_fn(model_cfg, testLoader):
         #    print(f"{k}: {v}")
 
         parameters_dict = zip(model.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.Tensor(v) for k, v in parameters_dict})
+        state_dict = OrderedDict({k: torch.as_tensor(v) for k, v in parameters_dict})
+        # TODO Tensors with 0 are being turned into empty tensors (like [])
 
         # print("length: ",len(state_dict))
         # for k,v in state_dict.items():
         # print("k: ", k," v: ",v)
+        print(state_dict)
         model.load_state_dict(state_dict, strict=True)
         # print("parameters in server: ", parameters, "client", server_round)
         loss, accuracy = test(model, testLoader, device)

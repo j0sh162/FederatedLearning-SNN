@@ -74,6 +74,9 @@ snn_net.net.load_state_dict(
     torch.load("snn_net.pt", weights_only=True, map_location=device)
 )
 
+print(snn_net.state_dict())
+quit()
+
 optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
 
