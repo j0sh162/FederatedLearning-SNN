@@ -7,6 +7,7 @@ import hydra
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
+from rich import print
 from sympy import evaluate
 
 from FL.client import generate_client_fn
@@ -23,7 +24,11 @@ def main(cfg: DictConfig):
     dataset_name = cfg.dataset.name
     dataset_path = cfg.datasets[dataset_name].path
     trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
-        dataset_name, dataset_path, cfg.fl.num_clients, cfg.fl.batch_size, 0.1
+        dataset_name,
+        dataset_path,
+        cfg.fl.num_clients,
+        cfg.datasets[dataset_name].batch_size,  # was originally cfg.fl.batch_size
+        0.1,
     )
     print(len(trainLoaders), len(trainLoaders[0].dataset))
 
@@ -51,8 +56,8 @@ def main(cfg: DictConfig):
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
         client_resources={
-            "num_cpus": 2,
-            "num_gpus": 0,
+            "num_cpus": 0,  # was 2
+            "num_gpus": 0.5,
         },  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results

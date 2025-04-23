@@ -34,6 +34,9 @@ def get_NMNIST_dataset(path):
     testset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=False
     )
+    split = 0.5
+    trainset = torch.utils.data.random_split(trainset, [split, 1 - split])[0]
+    testset = torch.utils.data.random_split(testset, [split, 1 - split])[0]
     trainset = MemoryCachedDataset(
         trainset,
         transform=tonic.transforms.Compose(
@@ -52,10 +55,13 @@ def load_dataset(
 
     if name == "mnist":
         trainSet, testSet = get_MNISTdataset(path)
+        collate_fn = None
     elif name == "cifar10":
         trainSet, testSet = get_CIFARdataset(path)
+        collate_fn = None
     elif name == "NMNIST":
         trainSet, testSet = get_NMNIST_dataset(path)
+        collate_fn = tonic.collation.PadTensors(batch_first=False)
     else:
         raise ValueError(f"Unsupported dataset: {name}")
 
@@ -84,9 +90,7 @@ def load_dataset(
                 batch_size=batch_size,
                 shuffle=True,
                 num_workers=2,
-                collate_fn=tonic.collation.PadTensors(
-                    batch_first=False
-                ),  # TODO Only for NMNIST
+                collate_fn=collate_fn,
             )
         )
         validationList.append(
@@ -95,13 +99,14 @@ def load_dataset(
                 batch_size=batch_size,
                 shuffle=False,
                 num_workers=2,
-                collate_fn=tonic.collation.PadTensors(batch_first=False),
+                collate_fn=collate_fn,
             )
         )
 
+    print("BATCH SIZE: ", batch_size)
     testList = DataLoader(
         testSet,
-        batch_size=128,
-        collate_fn=tonic.collation.PadTensors(batch_first=False),
+        batch_size=batch_size,  # originally 128
+        collate_fn=collate_fn,
     )
     return trainingList, validationList, testList

@@ -12,5 +12,5 @@ eta: 0.2
 eta_l: 0.1
 tau: 0.1
 initial_parameters:
-  _target_: FL.CNN.model_to_parameters
+  _target_: FL.training_utils.model_to_parameters
   model: ${model}

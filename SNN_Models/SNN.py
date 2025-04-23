@@ -49,6 +49,7 @@ class Net(nn.Module):
 
     def forward(self, x):
         spk_rec = []
+        x.to(device)
 
         utils.reset(self.net)  # resets hidden states for all LIF neurons in net
 
