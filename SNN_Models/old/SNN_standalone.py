@@ -1,5 +1,7 @@
 # Based on: https://ieeexplore.ieee.org/abstract/document/10242251
 # Adapted from: https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_7.html
+import os
+
 import matplotlib.pyplot as plt
 import tonic
 import tonic.transforms as transforms
@@ -40,8 +42,7 @@ cached_trainset = MemoryCachedDataset(trainset, transform=transform)
 # no augmentations for the testset
 cached_testset = MemoryCachedDataset(testset)
 
-# batch_size = 128
-batch_size = 2
+batch_size = 128
 train_loader = DataLoader(
     cached_trainset,
     batch_size=batch_size,
@@ -70,18 +71,18 @@ snn_net = SNN.Net(
     spike_grad=surrogate.atan(),
     beta=0.5,
 )
-snn_net.net.load_state_dict(
-    torch.load("snn_net.pt", weights_only=True, map_location=device)
-)
-
-print(snn_net.state_dict())
-quit()
+if os.path.exists("snn_net.pt"):
+    print("Loading existing model weights")
+    # Load the model weights
+    snn_net.net.load_state_dict(
+        torch.load("snn_net.pt", weights_only=True, map_location=device)
+    )
 
 optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
 
-num_epochs = 1
-num_iters = 20
+num_epochs = 3
+num_iters = 30
 num_batches = len(train_loader)
 
 loss_hist = []
@@ -121,9 +122,9 @@ for epoch in range(num_epochs):
 torch.save(snn_net.net.state_dict(), "snn_net.pt")
 
 # Plot Loss
-# fig = plt.figure(facecolor="w")
-# plt.plot(acc_hist)
-# plt.title("Train Set Accuracy")
-# plt.xlabel("Iteration")
-# plt.ylabel("Accuracy")
-# plt.show()
+fig = plt.figure(facecolor="w")
+plt.plot(acc_hist)
+plt.title("Train Set Accuracy")
+plt.xlabel("Iteration")
+plt.ylabel("Accuracy")
+plt.show()
