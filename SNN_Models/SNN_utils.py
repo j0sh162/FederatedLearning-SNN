@@ -35,22 +35,22 @@ def train(net, train_loader, optimizer, epochs, device: str):
 
 def test(net, testloader, device: str):
     criterion = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
-    acc_sum, loss_sum = 0.0, 0.0
+    acc_hist, loss_hist = [], []
     net.eval()
     net.to(device)
     with torch.no_grad():
         i = 0
         for data in testloader:
-            i += 1
-            if i > 10:
-                break
-
             images, labels = data[0].to(device), data[1].to(device)
             spk_rec = net(images)
             loss = criterion(spk_rec, labels)
             acc = SF.accuracy_rate(spk_rec, labels)
-            loss_sum += loss.item()
-            acc_sum += acc.item()
-    loss = loss_sum / len(testloader.dataset)
-    accuracy = acc_sum / len(testloader.dataset)
+            loss_hist.append(loss.item())
+            acc_hist.append(acc.item())
+
+            i += 1
+            if i > 10:  # Stop after 10 batches
+                break
+    loss = sum(loss_hist) / len(loss_hist)
+    accuracy = sum(acc_hist) / len(acc_hist)
     return loss, accuracy
