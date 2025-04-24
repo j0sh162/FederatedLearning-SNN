@@ -35,8 +35,16 @@ def get_NMNIST_dataset(path):
         save_to="./data", transform=frame_transform, train=False
     )
     split = 0.5
-    trainset = torch.utils.data.random_split(trainset, [split, 1 - split])[0]
-    testset = torch.utils.data.random_split(testset, [split, 1 - split])[0]
+    trainset = random_split(
+        trainset,
+        [split, 1 - split],
+        generator=torch.Generator().manual_seed(42),
+    )[0]
+    testset = random_split(
+        testset,
+        [split, 1 - split],
+        generator=torch.Generator().manual_seed(42),
+    )[0]
     trainset = MemoryCachedDataset(
         trainset,
         transform=tonic.transforms.Compose(
