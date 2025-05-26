@@ -1,0 +1,46 @@
+
+#FL Settings
+fl:
+  num_rounds: 2
+  num_clients: 100
+  batch_size: 20
+
+#Client settings - what server tell each client to use in their local training
+client:
+  lr: 2e-2 # learning rate
+  betas: [0.9, 0.999] # betas for Adam optimizer
+  momentum: 0.9
+  local_epochs: 3
+  num_classes: 10 # (N)MNIST data has 10 classes
+  num_clients_per_round_fit: 5
+  num_clients_per_round_evaluate: 10 #After each round if we have 100 clients 1/4 will be used to evaluate what's characteristic of the global model
+
+#Dataset selection
+dataset:
+  name: NMNIST  # Change to "cifar10" to switch dataset
+
+# Dataset-specific configs
+datasets:
+  mnist:
+    path: ./data/mnist
+    input_size: 28
+    channels: 1
+    num_classes: 10
+    batch_size: 32
+  cifar10:
+    path: ./data/cifar10
+    input_size: 32
+    channels: 3
+    num_classes: 10
+    batch_size: 64
+  NMNIST:
+    path: ./data
+    input_size: 34
+    channels: 2
+    num_classes: 10
+    batch_size: 50 # for testing
+
+defaults: #Here we define which model and strategy we wish to use,
+  - strategy: fedadam #create a config in conf/strategy and define the strategy parameters
+  - model: SNN #create a model yaml in conf/model and define the input parameters for that model
+

@@ -1,6 +1,10 @@
 # Based on: https://ieeexplore.ieee.org/abstract/document/10242251
 # Adapted from: https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_7.html
+import os
+
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 import tonic
 import tonic.transforms as transforms
 import torch
@@ -11,7 +15,8 @@ from snntorch import surrogate
 from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader
 
-from FederatedSNN.SNN import SNN
+from SNN_Models import SNN
+from SNN_Models.SNN_utils import test
 
 sensor_size = tonic.datasets.NMNIST.sensor_size
 
@@ -69,17 +74,21 @@ snn_net = SNN.Net(
     spike_grad=surrogate.atan(),
     beta=0.5,
 )
-snn_net.net.load_state_dict(torch.load("snn_net.pt", weights_only=True))
+if False:  # os.path.exists("snn_net.pt"):
+    print("Loading existing model weights")
+    # Load the model weights
+    snn_net.net.load_state_dict(
+        torch.load("snn_net.pt", weights_only=True, map_location=device)
+    )
 
-optimizer = torch.optim.Adam(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
+optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
 
 num_epochs = 1
-num_iters = 20
+num_iters = 90
 num_batches = len(train_loader)
 
-loss_hist = []
-acc_hist = []
+hist = []
 
 # training loop
 for epoch in range(num_epochs):
@@ -96,28 +105,32 @@ for epoch in range(num_epochs):
         loss_val.backward()
         optimizer.step()
 
-        # Store loss history for future plotting
-        loss_hist.append(loss_val.item())
-
         acc = SF.accuracy_rate(spk_rec, targets)
-        acc_hist.append(acc)
+        test_loss, test_acc = test(snn_net, test_loader, device)
+        hist.append([epoch, batch_number, loss_val.item(), acc, "train"])
+        hist.append([epoch, batch_number, test_loss, test_acc, "test"])
 
         print(
             "Epoch {:02d} | Batch {:03d}/{:03d} | Loss {:05.2f} | Accuracy {:05.2f}%".format(
                 epoch, batch_number, num_batches, loss_val.item(), acc * 100
             )
+            + " | Test Loss {:05.2f} | Test Accuracy {:05.2f}%".format(
+                test_loss, test_acc * 100
+            )
         )
 
         # training loop breaks after num_iters iterations/ batches
-        if batch_number == num_iters:
+        if batch_number == num_iters - 1:
             break
 
 torch.save(snn_net.net.state_dict(), "snn_net.pt")
 
-# Plot Loss
-# fig = plt.figure(facecolor="w")
-# plt.plot(acc_hist)
-# plt.title("Train Set Accuracy")
-# plt.xlabel("Iteration")
-# plt.ylabel("Accuracy")
-# plt.show()
+fig = plt.figure(facecolor="w")
+df = pd.DataFrame(hist, columns=["epoch", "batch", "Loss", "Acc", "Set"])
+df.to_csv("acc_hist.csv", index=False)
+df["epoch_batch"] = df["epoch"].astype(str) + "-" + df["batch"].astype(str)
+sns.lineplot(data=df, x="epoch_batch", y="Acc", hue="Set")
+plt.title("Train/ Test Set Accuracy")
+plt.xlabel("Epoch-Batch")
+plt.ylabel("Accuracy")
+plt.show()

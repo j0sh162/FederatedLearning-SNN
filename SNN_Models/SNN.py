@@ -1,21 +1,10 @@
 # Based on: https://ieeexplore.ieee.org/abstract/document/10242251
 # Adapted from: https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_7.html
-import matplotlib.pyplot as plt
-import nir
 import snntorch as snn
-import tonic
-import tonic.transforms as transforms
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision
 from rich import print
-from snntorch import functional as SF
-from snntorch import spikeplot as splt
 from snntorch import surrogate, utils
-from snntorch.export_nir import export_to_nir
-from tonic import DiskCachedDataset, MemoryCachedDataset
-from torch.utils.data import DataLoader
 
 device = (
     torch.device("cuda")
@@ -60,6 +49,7 @@ class Net(nn.Module):
 
     def forward(self, x):
         spk_rec = []
+        x.to(device)
 
         utils.reset(self.net)  # resets hidden states for all LIF neurons in net
 

@@ -1,0 +1,3 @@
+---
+_target_: SNN_Models.SNN.Net #points to the model directory
+# num_classes: ${client.num_classes}

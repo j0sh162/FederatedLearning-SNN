@@ -1,0 +1,16 @@
+---
+_target_: flwr.server.strategy.FedAdam #flower FedAdam function path, below all required parameters defined for this function
+fraction_fit: 0.00001
+min_fit_clients: ${client.num_clients_per_round_fit}
+fraction_evaluate: 0.00001
+min_evaluate_clients: ${client.num_clients_per_round_fit}
+min_available_clients: ${fl.num_clients}
+on_fit_config_fn:
+  _target_: FL.server.get_on_fit_config
+  config: ${client}
+eta: 0.2
+eta_l: 0.1
+tau: 0.1
+initial_parameters:
+  _target_: FL.training_utils.model_to_parameters
+  model: ${model}
