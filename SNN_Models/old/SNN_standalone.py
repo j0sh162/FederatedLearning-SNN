@@ -15,7 +15,7 @@ from snntorch import surrogate
 from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader
 
-from SNN_Models import SNN
+from SNN_Models import SNN_old
 from SNN_Models.SNN_utils import test
 
 sensor_size = tonic.datasets.NMNIST.sensor_size
@@ -67,7 +67,7 @@ device = (
 )
 print(f"Using device: {device}")
 
-snn_net = SNN.Net(
+snn_net = SNN_old.Net(
     input_shape=reversed(sensor_size),
     num_hidden=None,
     num_output=None,

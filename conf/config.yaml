@@ -2,8 +2,8 @@
 #FL Settings
 fl:
   num_rounds: 2
-  num_clients: 100
-  batch_size: 20
+  num_clients: 2
+  batch_size: 34
 
 #Client settings - what server tell each client to use in their local training
 client:
@@ -12,8 +12,8 @@ client:
   momentum: 0.9
   local_epochs: 3
   num_classes: 10 # (N)MNIST data has 10 classes
-  num_clients_per_round_fit: 5
-  num_clients_per_round_evaluate: 10 #After each round if we have 100 clients 1/4 will be used to evaluate what's characteristic of the global model
+  num_clients_per_round_fit: 2
+  num_clients_per_round_evaluate: 1 #After each round if we have 100 clients 1/4 will be used to evaluate what's characteristic of the global model
 
 #Dataset selection
 dataset:
@@ -38,9 +38,8 @@ datasets:
     input_size: 34
     channels: 2
     num_classes: 10
-    batch_size: 50 # for testing
+    batch_size: 34 # for testing
 
 defaults: #Here we define which model and strategy we wish to use,
   - strategy: fedadam #create a config in conf/strategy and define the strategy parameters
   - model: SNN #create a model yaml in conf/model and define the input parameters for that model
-

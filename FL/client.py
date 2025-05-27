@@ -17,6 +17,8 @@ class FlowerClient(fl.client.NumPyClient):
         self.trainloader = trainloader
         self.valloader = valloader
         self.model = instantiate(model_cfg)
+        if not isinstance(self.model, torch.nn.Module):
+            self.model = self.model()
         # run on GPU if available else CPU
         self.device = (
             torch.device("cuda")
@@ -45,39 +47,31 @@ class FlowerClient(fl.client.NumPyClient):
         # copy parameters sent by server into client's local model
         self.set_params(parameters)
 
-        # training model locally
-        # print(
-        #     "lr ",
-        #     config["lr"],
-        #     " momentum ",
-        #     config["momentum"],
-        #     " local_epochs ",
-        #     config["local_epochs"],
-        # )
-        # optim = torch.optim.SGD(
-        #     self.model.parameters(),
-        #     lr=config["lr"],
-        #     momentum=config["momentum"],
-        # )
-        # TODO ADAM optimizer might need to be adjusted to work properly in FL as it
-        #     # it changes its parameters in time
+        # DEBUG: Check model type and parameters
+        print("DEBUG: Model type:", type(self.model))
+        params = list(self.model.parameters())
+        print("DEBUG: Number of model parameters:", len(params))
+        for name, param in self.model.named_parameters():
+            print(f"Param: {name}, requires_grad={param.requires_grad}, shape={param.shape}")
+
+        if len(params) == 0:
+            raise ValueError("The model has no trainable parameters! Check if it's correctly built.")
+
+        # Initialize optimizer
         optim = torch.optim.AdamW(
-            self.model.parameters(),
+            filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=config["lr"],
             betas=[0.9, 0.999],
-            # betas=config["betas"],
         )
-        # if config["model"]["name"] == "SNN":
-        if True:
-            SNN_utils.train(
-                self.model, self.trainloader, optim, config["local_epochs"], self.device
-            )
-        else:
-            train(
-                self.model, self.trainloader, optim, config["local_epochs"], self.device
-            )
-        # return updated model
+
+        # Train the model
+        SNN_utils.train(
+            self.model, self.trainloader, optim, config["local_epochs"], self.device
+        )
+
+        # Return updated model parameters
         return self.get_parameters({}), len(self.trainloader), {}
+
 
     def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):
         """Receive parameters from global model and evaluate local validation set and return wanted information in this case: loss/accuracy"""

@@ -1,56 +1,125 @@
 import torch
+import torch.nn as nn
 from snntorch import functional as SF
+import pickle
+import torch
+import time
+import numpy as np
+from SNN_Models.nmnist_compact_dataset import NMNISTDataset
+from SNN_Models.training_biograd import biograd_snn_training
+from SNN_Models.online_error_functions import cross_entropy_loss_error_function
 
 
-def train(net, train_loader, optimizer, epochs, device: str):
-    net.train()
-    net.to(device)
-    num_batches = len(train_loader)
-    loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
-    for epoch in range(epochs):
-        for batch_number, (data, targets) in enumerate(iter(train_loader)):
-            try:
-                data = data.to(device)
-                targets = targets.to(device)
+def train(network, train_loader, optimizer, epochs, device: str,
+                         validation_size=10000, batch_size=1, sleep_batch_size=1,
+                         test_batch_size=1, epoch=100,
+                         save_epoch=1, lr=1e-3,
+                         sleep_oja_power=2, sleep_lr=1e-3, sleep_spike_ts=50, soft_error_step=19):
+    """
+    BioGrad SNN training with sleep
 
-                net.net.train()
-                spk_rec = net.forward(data)
-                loss_val = loss_fn(spk_rec, targets)
+    Args:
+        network (SNN): Online learning SNN
+        train_dataset (dataset): training dataset
+        test_dataset (dataset): test dataset
+        sleep_spike_ts (int): spike timestep for sleep
+        device (device):device
+        soft_error_step (int): soft start error step for feedback simulation
+        session_name (str): name of the training session
+        validation_size (int): size of validation set
+        batch_size (int): batch size for training
+        sleep_batch_size (int): batch size for sleep
+        test_batch_size (int): batch size for testing
+        epoch (int): number of epoches
+        save_epoch (int): every number of epoch to save model
+        lr (float): learning rate
+        sleep_oja_power (float): oja power for oja decay for sleep
+        sleep_lr (float): learning rate for sleep
 
-                # Gradient calculation + weight update
-                optimizer.zero_grad()
-                loss_val.backward()
-                optimizer.step()
+    Returns:
+        train_accuracy_list: list of training accuracy for each epoch
+        val_accuracy_list: list of validation accuracy for each epoch
+        test_accuracy_list: list of test accuracy for each epoch
+        feedback_angle: list of feedback angle of each hidden layer
+        feedback_ratio: list of feedback ratio of each hidden layer
+    """
 
-                acc = SF.accuracy_rate(spk_rec, targets)
-                print(
-                    "Epoch {:02d} | Batch {:03d}/{:03d} | Loss {:05.2f} | Accuracy {:05.2f}%".format(
-                        epoch, batch_number, num_batches, loss_val.item(), acc * 100
-                    )
-                )
-            except Exception as e:
-                print("Error in training loop:", e)
-                break
+    # Train, validation, and test dataloader
+    train_dataloader = train_loader
+
+    for data in train_dataloader:
+        images, labels = data
+        print(f"DEBUG — DataLoader batch size: {images.shape[0]}")
+
+    # Number of samples in train, validation, and test dataset
+    train_num = len(train_dataloader.dataset)
+
+    # List for save accuracy
+    train_accuracy_list, val_accuracy_list, test_accuracy_list = [], [], []
+
+    # Compute init angle and ratio between feedback weight and forward weight
+    feedback_angle, feedback_ratio = [], []
+    angle_list, ratio_list = network.compute_feedback_angle_ratio()
+    feedback_angle.append(angle_list)
+    feedback_ratio.append(ratio_list)
+
+    # Start training
+    with torch.no_grad():
+        for ee in range(epoch):
+            # Training
+            train_correct = 0
+            train_start = time.time()
+            for data in train_dataloader:
+                event_img, labels = data
+                labels_one_hot = nn.functional.one_hot(labels, num_classes=10).float()
+                event_img, labels, labels_one_hot = event_img.to(device), labels.to(device), labels_one_hot.to(device)
+                predict_label, hid_fwd_states, hid_fb_states, out_fwb_state, out_fb_state, fb_step = network.train_online(
+                    event_img, labels_one_hot, soft_error_step)
+                network.train_update_parameter(hid_fwd_states, hid_fb_states, out_fwb_state, out_fb_state, fb_step, lr)
+                train_correct += ((predict_label == labels).sum().to("cpu")).item()
+
+                # Put network to sleep for feedback training
+                network.sleep_feedback_update(sleep_batch_size, sleep_spike_ts, sleep_oja_power, sleep_lr)
+
+                # Compute angle and ratio between feedback weight and forward weight after each update
+                angle_list, ratio_list = network.compute_feedback_angle_ratio()
+                feedback_angle.append(angle_list)
+                feedback_ratio.append(ratio_list)
+
+            train_end = time.time()
+            train_accuracy_list.append(train_correct / train_num)
+            print("Epoch %d Training Accuracy %.4f" % (ee, train_accuracy_list[-1]), end=" ")
+            """
+            # Validation
+            val_correct = 0
+            val_start = time.time()
+            for data in val_dataloader:
+                event_img, labels = data
+                event_img, labels = event_img.to(device), labels.to(device)
+                predict_label = network.test(event_img)
+                val_correct += ((predict_label == labels).sum().to("cpu")).item()
+            val_end = time.time()
+            val_accuracy_list.append(val_correct / val_num)
+            tf_writer.add_scalar('nmnist_exp/val_accuracy', val_accuracy_list[-1], ee)
+            print("Validate Accuracy %.4f" % val_accuracy_list[-1], end=" ")
+            """
+
+    print("End Training")
+    #return train_accuracy_list, val_accuracy_list, test_accuracy_list, feedback_angle, feedback_ratio
+
 
 
 def test(net, testloader, device: str):
-    criterion = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
-    acc_hist, loss_hist = [], []
+    criterion = torch.nn.CrossEntropyLoss()
+    correct, loss = 0, 0.0
     net.eval()
     net.to(device)
     with torch.no_grad():
-        i = 0
         for data in testloader:
             images, labels = data[0].to(device), data[1].to(device)
-            spk_rec = net(images)
-            loss = criterion(spk_rec, labels)
-            acc = SF.accuracy_rate(spk_rec, labels)
-            loss_hist.append(loss.item())
-            acc_hist.append(acc.item())
-
-            i += 1
-            if i > 10:  # Stop after 10 batches
-                break
-    loss = sum(loss_hist) / len(loss_hist)
-    accuracy = sum(acc_hist) / len(acc_hist)
+            outputs, _ = net(images)
+            loss += criterion(outputs, labels).item()
+            _, predicted = torch.max(outputs.data, 1)
+            correct += (predicted == labels).sum().item()
+    accuracy = correct / len(testloader.dataset)
     return loss, accuracy
