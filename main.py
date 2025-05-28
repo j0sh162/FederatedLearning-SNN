@@ -9,6 +9,7 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from rich import print
 from sympy import evaluate
+from flwr.server.strategy import DifferentialPrivacyClientSideFixedClipping, DifferentialPrivacyServerSideFixedClipping
 
 from FL.client import generate_client_fn
 from FL.server import get_evaluate_fn, get_on_fit_config
@@ -46,19 +47,31 @@ def main(cfg: DictConfig):
     #                                      min_available_clients=cfg.fl.num_clients,
     #                                      on_fit_config_fn=get_on_fit_config(cfg.client),
     #                                      evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader)) #At the end of aggregation we obtain new global model and evaluate it
-    strategy = instantiate(
+    base_strategy = instantiate(
         cfg.strategy, evaluate_fn=get_evaluate_fn(cfg.model, testLoader)
     )
+
+    # Server-side central differential privacy
+    if cfg.fl.differential_privacy:
+        strategy = DifferentialPrivacyServerSideFixedClipping(
+            base_strategy,
+            cfg.fl.noise_multiplier,
+            cfg.fl.clipping_norm,
+            cfg.fl.num_sampled_clients
+        )
+    else:
+        strategy = base_strategy
+
     # 5. Run your simulation
     history = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=cfg.fl.num_clients,
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
-        client_resources={
-            "num_cpus": 0,  # was 2
-            "num_gpus": 0.5,
-        },  # run client concurrently on gpu 0.25 = 4 clients concurrently
+        #client_resources={
+        #    "num_cpus": 1,  # was 2
+        #    "num_gpus": 0.5,
+        #},  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results
     save_path = HydraConfig.get().runtime.output_dir

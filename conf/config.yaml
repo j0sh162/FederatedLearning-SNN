@@ -1,9 +1,14 @@
 
 #FL Settings
 fl:
-  num_rounds: 2
+  num_rounds: 5
   num_clients: 100
   batch_size: 20
+  differential_privacy: True
+  noise_multiplier: 1.0
+  clipping_norm: 0.1 # Recommendation by Flower
+  num_sampled_clients: 5
+
 
 #Client settings - what server tell each client to use in their local training
 client:
