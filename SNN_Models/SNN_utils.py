@@ -5,16 +5,17 @@ import pickle
 import torch
 import time
 import numpy as np
-from SNN_Models.nmnist_compact_dataset import NMNISTDataset
+from SNN_Models.nmnist_dataset import NMNISTDataset
 from SNN_Models.training_biograd import biograd_snn_training
 from SNN_Models.online_error_functions import cross_entropy_loss_error_function
-
+from torch.utils.data import DataLoader, sampler
 
 def train(network, train_loader, optimizer, epochs, device: str,
                          validation_size=10000, batch_size=1, sleep_batch_size=1,
                          test_batch_size=1, epoch=100,
                          save_epoch=1, lr=1e-3,
                          sleep_oja_power=2, sleep_lr=1e-3, sleep_spike_ts=50, soft_error_step=19):
+    print("c")
     """
     BioGrad SNN training with sleep
 
@@ -45,14 +46,13 @@ def train(network, train_loader, optimizer, epochs, device: str,
     """
 
     # Train, validation, and test dataloader
-    train_dataloader = train_loader
 
-    for data in train_dataloader:
+    for data in train_loader:
         images, labels = data
         print(f"DEBUG — DataLoader batch size: {images.shape[0]}")
 
     # Number of samples in train, validation, and test dataset
-    train_num = len(train_dataloader.dataset)
+    train_num = len(train_loader.dataset)
 
     # List for save accuracy
     train_accuracy_list, val_accuracy_list, test_accuracy_list = [], [], []
@@ -69,7 +69,8 @@ def train(network, train_loader, optimizer, epochs, device: str,
             # Training
             train_correct = 0
             train_start = time.time()
-            for data in train_dataloader:
+            for i, data in enumerate(train_loader):
+                print("Batch", str(i) + "/" + str(len(train_loader)))
                 event_img, labels = data
                 labels_one_hot = nn.functional.one_hot(labels, num_classes=10).float()
                 event_img, labels, labels_one_hot = event_img.to(device), labels.to(device), labels_one_hot.to(device)
@@ -108,14 +109,15 @@ def train(network, train_loader, optimizer, epochs, device: str,
     #return train_accuracy_list, val_accuracy_list, test_accuracy_list, feedback_angle, feedback_ratio
 
 
-
 def test(net, testloader, device: str):
+    print("d")
     criterion = torch.nn.CrossEntropyLoss()
     correct, loss = 0, 0.0
     net.eval()
     net.to(device)
     with torch.no_grad():
-        for data in testloader:
+        for i, data in enumerate(testloader):
+            print("Batch", str(i) + "/" + str(len(testloader)))
             images, labels = data[0].to(device), data[1].to(device)
             outputs, _ = net(images)
             loss += criterion(outputs, labels).item()

@@ -211,17 +211,16 @@ class Net(nn.Module):
 
     def test(self, spike_data, batch_size):
         # For debugging
-        print("spike_data.shape:", spike_data.shape)
-        print("spike_data.numel():", spike_data.numel())
+        #print("spike_data.shape:", spike_data.shape)
+        #print("spike_data.numel():", spike_data.numel())
 
         # Determine input_dim dynamically
-        channels = spike_data.shape[2]
-        height = spike_data.shape[3]
-        width = spike_data.shape[4]
+        batch_size = spike_data.shape[0]
+        channels = spike_data.shape[1]
+        height = spike_data.shape[2]
+        width = spike_data.shape[3]
+        spike_ts = spike_data.shape[4]
         input_dim = channels * height * width
-
-        # Time dimension
-        spike_ts = spike_data.shape[0]
 
         # Check if we need to permute: from [time, batch, channels, H, W] to [batch, channels, H, W, time]
         if spike_data.shape != (batch_size, input_dim, spike_ts):
@@ -234,8 +233,8 @@ class Net(nn.Module):
             raise RuntimeError(f"Reshape mismatch: {spike_data.numel()} vs expected {expected_elements}")
 
         # For debugging
-        print("spike_data.shape:", spike_data.shape)
-        print("target reshape:", batch_size, input_dim, spike_ts)
+        #print("spike_data.shape:", spike_data.shape)
+        #print("target reshape:", batch_size, input_dim, spike_ts)
 
         # Init hidden states
         hidden_forward_states = [
@@ -257,7 +256,7 @@ class Net(nn.Module):
         # Sum spikes over time
         spk_count = spk_rec.sum(dim=2)
 
-        print("Final spk_count shape:", spk_count.shape)
+        #print("Final spk_count shape:", spk_count.shape)
 
         predict_label = torch.argmax(spk_count, dim=1)
         return spk_count, predict_label
@@ -312,5 +311,5 @@ class Net(nn.Module):
         return angle, ratio
 
     def forward(self, x):
-        print("Checking what x.shape[1] is", x.shape[1])
+        #print("Checking what x.shape[1] is", x.shape[1])
         return self.test(x, x.shape[1])

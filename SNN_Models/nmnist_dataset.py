@@ -18,7 +18,7 @@ class NMNISTDataset(Dataset):
     def __getitem__(self, item):
         event_image = transform_compact_event_to_array(np.zeros((2, 34, 34, self.timestep * self.dt)),
                                                        self.compact_event_label_list[item][0])
-        event_image = event_image.astype(np.float)
+        event_image = event_image.astype(float)
         event_image = event_image.reshape(2, 34, 34, self.timestep, self.dt).max(axis=4).squeeze()
         event_image = torch.from_numpy(event_image).float()
         label = self.compact_event_label_list[item][1]
