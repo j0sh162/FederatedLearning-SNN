@@ -74,6 +74,7 @@ class Net(nn.Module):
             feedback_step: number of steps for feedback simulation
 
         """
+        spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
         batch_size = spike_data.shape[0]
         spike_ts = spike_data.shape[-1]
         if len(spike_data.shape) > 3:
@@ -209,10 +210,12 @@ class Net(nn.Module):
             # Update Feedback Weights for this Hidden Layer
             self.hidden_cells[idx].feedback_func.weight.data += lr * (corr_batch_sum - oja_decay)
 
-    def test(self, spike_data, batch_size):
+    def test(self, spike_data): # removed batch_size param 30/05/25 since it's determined below
         # For debugging
         #print("spike_data.shape:", spike_data.shape)
         #print("spike_data.numel():", spike_data.numel())
+
+        spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
 
         # Determine input_dim dynamically
         batch_size = spike_data.shape[0]

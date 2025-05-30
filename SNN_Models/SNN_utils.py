@@ -5,7 +5,6 @@ import pickle
 import torch
 import time
 import numpy as np
-from SNN_Models.nmnist_dataset import NMNISTDataset
 from SNN_Models.training_biograd import biograd_snn_training
 from SNN_Models.online_error_functions import cross_entropy_loss_error_function
 from torch.utils.data import DataLoader, sampler

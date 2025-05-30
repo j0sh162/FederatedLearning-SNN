@@ -5,6 +5,7 @@ from torch.utils.tensorboard import SummaryWriter
 import time
 import os
 import pickle
+from tqdm import trange, tqdm # added 30/05/25 for debugging purposes
 
 
 def biograd_snn_training(network, train_dataset, test_dataset, sleep_spike_ts, device, soft_error_step, session_name,
@@ -92,11 +93,11 @@ def biograd_snn_training(network, train_dataset, test_dataset, sleep_spike_ts, d
 
     # Start training
     with torch.no_grad():
-        for ee in range(epoch):
+        for ee in trange(epoch, desc="epoch"):
             # Training
             train_correct = 0
             train_start = time.time()
-            for data in train_dataloader:
+            for data in tqdm(train_dataloader, "train"):
                 event_img, labels = data
                 labels_one_hot = nn.functional.one_hot(labels, num_classes=10).float()
                 event_img, labels, labels_one_hot = event_img.to(device), labels.to(device), labels_one_hot.to(device)
@@ -126,10 +127,10 @@ def biograd_snn_training(network, train_dataset, test_dataset, sleep_spike_ts, d
             # Validation
             val_correct = 0
             val_start = time.time()
-            for data in val_dataloader:
+            for data in tqdm(val_dataloader, "validate"):
                 event_img, labels = data
                 event_img, labels = event_img.to(device), labels.to(device)
-                predict_label = network.test(event_img)
+                _, predict_label = network.test(event_img) # changed 30/05/25 for compatibility with tonic
                 val_correct += ((predict_label == labels).sum().to("cpu")).item()
             val_end = time.time()
             val_accuracy_list.append(val_correct / val_num)
@@ -139,10 +140,10 @@ def biograd_snn_training(network, train_dataset, test_dataset, sleep_spike_ts, d
             # Testing
             test_correct = 0
             test_start = time.time()
-            for data in test_dataloader:
+            for data in tqdm(test_dataloader, "test"):
                 event_img, labels = data
                 event_img, labels = event_img.to(device), labels.to(device)
-                predict_label = network.test(event_img)
+                _, predict_label = network.test(event_img) # changed 30/05/25 for compatibility with tonic
                 test_correct += ((predict_label == labels).sum().to("cpu")).item()
             test_end = time.time()
             test_accuracy_list.append(test_correct / test_num)
