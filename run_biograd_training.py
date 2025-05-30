@@ -34,7 +34,6 @@ def main():
     sleep_spike_ts = 50
 
     # Define Training parameters
-    val_size = 10000
     train_batch_size = 128
     sleep_batch_size = 128
     test_batch_size = 256
@@ -55,14 +54,13 @@ def main():
 
         online_snn = BioGradNetworkWithSleep(in_shape, out_dim, hidden_dim_list,
                                             snn_param, cross_entropy_loss_error_function, device)
-        train_acc, val_acc, test_acc, fb_angle, fb_ratio = biograd_snn_training(
+        train_acc, test_acc, fb_angle, fb_ratio = biograd_snn_training(
             online_snn, train_ds, test_ds, sleep_spike_ts, device, soft_error_start, session_name,
-            validation_size=val_size, batch_size=train_batch_size, sleep_batch_size=sleep_batch_size,
+            batch_size=train_batch_size, sleep_batch_size=sleep_batch_size,
             test_batch_size=test_batch_size, epoch=epoch, save_epoch=save_epoch, lr=lr,
             sleep_oja_power=sleep_oja_power, sleep_lr=sleep_lr)
 
         pickle.dump(train_acc, open("./save_models/" + session_name + "/train_accuracy_list.p", "wb+"))
-        pickle.dump(val_acc, open("./save_models/" + session_name + "/val_accuracy_list.p", "wb+"))
         pickle.dump(test_acc, open("./save_models/" + session_name + "/test_accuracy_list.p", "wb+"))
         pickle.dump(fb_angle, open("./save_models/" + session_name + "/feedback_angle_list.p", "wb+"))
         pickle.dump(fb_ratio, open("./save_models/" + session_name + "/feedback_ratio_list.p", "wb+"))
