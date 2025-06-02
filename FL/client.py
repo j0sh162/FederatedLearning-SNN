@@ -3,7 +3,7 @@ from typing import Dict
 
 import flwr as fl
 import torch
-from flwr.common import NDArrays, Scalar
+from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
 from rich import print
 
@@ -95,11 +95,12 @@ def generate_client_fn(trainloaders, valloaders, model_cfg):
     """spawning clients for simulation"""
 
     def client_fn(clientID: str):
+        # TODO Add context: Context as argument as this way is deprecated
         print("client function with id ", clientID)
         return FlowerClient(
             trainloader=trainloaders[int(clientID)],
             valloader=valloaders[int(clientID)],
             model_cfg=model_cfg,
-        )
+        ).to_client()
 
     return client_fn

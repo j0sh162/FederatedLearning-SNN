@@ -4,12 +4,15 @@ from pathlib import Path
 
 import flwr as fl
 import hydra
+from flwr.server.strategy import (
+    DifferentialPrivacyClientSideFixedClipping,
+    DifferentialPrivacyServerSideFixedClipping,
+)
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from rich import print
 from sympy import evaluate
-from flwr.server.strategy import DifferentialPrivacyClientSideFixedClipping, DifferentialPrivacyServerSideFixedClipping
 
 from FL.client import generate_client_fn
 from FL.server import get_evaluate_fn, get_on_fit_config
@@ -57,7 +60,7 @@ def main(cfg: DictConfig):
             base_strategy,
             cfg.fl.noise_multiplier,
             cfg.fl.clipping_norm,
-            cfg.fl.num_sampled_clients
+            cfg.fl.num_sampled_clients,
         )
     else:
         strategy = base_strategy
@@ -68,10 +71,10 @@ def main(cfg: DictConfig):
         num_clients=cfg.fl.num_clients,
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
-        #client_resources={
-        #    "num_cpus": 1,  # was 2
-        #    "num_gpus": 0.5,
-        #},  # run client concurrently on gpu 0.25 = 4 clients concurrently
+        client_resources={
+            "num_cpus": 8,  # was 2
+            "num_gpus": 1,
+        },  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results
     save_path = HydraConfig.get().runtime.output_dir

@@ -85,7 +85,7 @@ optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.9
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
 
 num_epochs = 1
-num_iters = 90
+num_iters = 30
 num_batches = len(train_loader)
 
 hist = []
