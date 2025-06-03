@@ -10,6 +10,7 @@ from omegaconf import DictConfig, OmegaConf
 from rich import print
 from sympy import evaluate
 from flwr.server.strategy import DifferentialPrivacyClientSideFixedClipping, DifferentialPrivacyServerSideFixedClipping
+import torch, gc
 
 from FL.client import generate_client_fn
 from FL.server import get_evaluate_fn, get_on_fit_config
@@ -40,13 +41,13 @@ def main(cfg: DictConfig):
     )
 
     # 4. Define Strategy
-    # strategy = fl.server.strategy.FedAvg(fraction_fit=0.00001,
-    #                                      min_fit_clients=cfg.client.num_clients_per_round_fit,
-    #                                      fraction_evaluate=0.00001,
-    #                                      min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
-    #                                      min_available_clients=cfg.fl.num_clients,
-    #                                      on_fit_config_fn=get_on_fit_config(cfg.client),
-    #                                      evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader)) #At the end of aggregation we obtain new global model and evaluate it
+    """strategy = fl.server.strategy.FedAvg(fraction_fit=0.00001,
+                                          min_fit_clients=cfg.client.num_clients_per_round_fit,
+                                          fraction_evaluate=0.00001,
+                                          min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
+                                          min_available_clients=cfg.fl.num_clients,
+                                          on_fit_config_fn=get_on_fit_config(cfg.client),
+                                          evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader))""" #At the end of aggregation we obtain new global model and evaluate it
     base_strategy = instantiate(
         cfg.strategy, evaluate_fn=get_evaluate_fn(cfg.model, testLoader)
     )
@@ -68,10 +69,10 @@ def main(cfg: DictConfig):
         num_clients=cfg.fl.num_clients,
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
-        #client_resources={
-        #    "num_cpus": 1,  # was 2
-        #    "num_gpus": 0.5,
-        #},  # run client concurrently on gpu 0.25 = 4 clients concurrently
+        client_resources={
+            "num_cpus": 1,  # was 2
+            "num_gpus": 0.5 if torch.cuda.is_available() else 0,  # use 0.5 gpu if available
+        }  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results
     save_path = HydraConfig.get().runtime.output_dir
