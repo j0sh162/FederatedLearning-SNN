@@ -1,0 +1,34 @@
+---
+_target_: SNN_Models.snn_spide_mnist_lenet.SNNSPIDEConvMultiLayerNet # Class to instantiate
+
+# This 'cfg' key directly maps to the 'cfg' argument in your model's __init__
+cfg:
+  # This 'MODEL' key matches the structure expected by your parse_cfg method
+  MODEL:
+    c_in: 1 # Example for MNIST/grayscale
+    c_hidden: 15
+    c_s1: 40
+    # IMPORTANT: Calculate h_hidden/w_hidden based on your input data size (H, W),
+    # stride_x, and pooling layers.
+    # E.g., for MNIST 28x28, stride_x=1, padding_x=2 (output 28x28),
+    # then pooling (output 14x14) -> h_hidden=14, w_hidden=14
+    h_hidden: 28 # Example: Adjust based on actual input dims and layers
+    w_hidden: 28 # Example: Adjust based on actual input dims and layers
+    fc_num: 300
+    num_classes: ${client.num_classes} # Reference other parts of your config (good!)
+    kernel_size_x: 5
+    stride_x: 1
+    padding_x: 2
+    pooling_x: True # Assuming you want the first pooling layer active
+    kernel_size_s: 5
+    time_step: 10
+    time_step_back: 5 # Or some other value
+    vth: 1.0
+    # Optional parameters (use null in YAML for None in Python)
+    vth_back: 1.0 # Or ${.vth} to reuse vth
+    u_rest: 0.0   # Or null
+    u_rest_back: 0.0 # Or null
+    dropout: 0.0
+    leaky: null # Set to a float value (e.g., 0.9) if you want LIF neurons
+  # If your cfg dictionary needed other top-level keys besides 'MODEL',
+  # they would go here, at the same level as 'MODEL'.
