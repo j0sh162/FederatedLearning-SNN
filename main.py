@@ -1,6 +1,7 @@
 # Main class to run federated learning
 import pickle
 from pathlib import Path
+import tonic
 
 import flwr as fl
 import hydra
@@ -14,7 +15,6 @@ from FL.client import generate_client_fn
 from FL.server import get_evaluate_fn, get_on_fit_config
 from Training import dataset
 
-from SNN_Models.nmnist_dataset import NMNISTDataset
 from SNN_Models.training_biograd import biograd_snn_training
 from SNN_Models.online_error_functions import cross_entropy_loss_error_function
 from torch.utils.data import DataLoader, sampler
@@ -26,11 +26,16 @@ def main(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))
 
     # 2. Prepare dataset
-    snn_ts = 60
-    dt = 5
-    unlimited_mem = False
+    snn_ts = 20 # was 60, changed to 20 to fall in line with other methods like EventProp
+    transform = tonic.transforms.Compose(
+        [
+            tonic.transforms.Denoise(filter_time=10000),
+            tonic.transforms.ToFrame(sensor_size=tonic.datasets.NMNIST.sensor_size, n_time_bins=snn_ts),
+        ]
+    )    # Read N-MNIST data
+
     validation_size = 10000
-    train_dataset = NMNISTDataset('./data/NMNIST/Train', snn_ts, dt)
+    train_dataset = tonic.datasets.NMNIST("data", train=True, transform=transform)
     train_idx = [idx for idx in range(len(train_dataset) - validation_size)]
     val_idx = [(idx + len(train_idx)) for idx in range(validation_size)]
     train_sampler = sampler.SubsetRandomSampler(train_idx)
@@ -38,10 +43,7 @@ def main(cfg: DictConfig):
     train_dataloader = DataLoader(train_dataset, batch_size=1, sampler=train_sampler,
                                   shuffle=False, num_workers=4)
 
-    snn_ts = 60
-    dt = 5
-    unlimited_mem = False
-    test_dataset = NMNISTDataset('./data/NMNIST/Test', snn_ts, dt)
+    test_dataset = tonic.datasets.NMNIST("data", train=False, transform=transform)
     test_idx = [idx for idx in range(len(test_dataset))]
     #val_idx = [(idx + len(train_idx)) for idx in range(validation_size)]
     test_sampler = sampler.SubsetRandomSampler(test_idx)
@@ -75,7 +77,7 @@ def main(cfg: DictConfig):
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
         client_resources={
-            "num_cpus": 6,  # was 2
+            "num_cpus": 2,  # was 2
             "num_gpus": 1,
         },  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )

@@ -10,7 +10,7 @@ client:
   lr: 2e-2 # learning rate
   betas: [0.9, 0.999] # betas for Adam optimizer
   momentum: 0.9
-  local_epochs: 3
+  local_epochs: 1
   num_classes: 10 # (N)MNIST data has 10 classes
   num_clients_per_round_fit: 2
   num_clients_per_round_evaluate: 1 #After each round if we have 100 clients 1/4 will be used to evaluate what's characteristic of the global model

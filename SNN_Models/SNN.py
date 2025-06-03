@@ -315,4 +315,4 @@ class Net(nn.Module):
 
     def forward(self, x):
         #print("Checking what x.shape[1] is", x.shape[1])
-        return self.test(x, x.shape[1])
+        return self.test(x)#, x.shape[1])

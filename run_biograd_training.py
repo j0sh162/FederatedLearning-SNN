@@ -36,7 +36,7 @@ def main():
     # Define Training parameters
     train_batch_size = 128
     sleep_batch_size = 128
-    test_batch_size = 256
+    test_batch_size = 1
     epoch = 100
     save_epoch = 1
     lr = 1.0e-3

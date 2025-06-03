@@ -261,10 +261,10 @@ class OnlineOutputCell(OnlineHiddenCell):
         error_neuron_psp = self.feedback_func(pos_input) - self.feedback_func(neg_input)
 
         error_pos_volt = error_pos_volt - error_pos_spike + error_neuron_psp
-        pos_spike_output = error_pos_volt.gt(1.0).float()
+        pos_spike_output = error_pos_volt.float() #error_pos_volt.gt(1.0).float()
 
         error_neg_volt = error_neg_volt - error_neg_spike - error_neuron_psp
-        neg_spike_output = error_neg_volt.gt(1.0).float()
+        neg_spike_output = error_neg_volt.float() #error_neg_volt.gt(1.0).float()
 
         # Update error dendrite
         error_dendrite_volt = error_dendrite_volt + (pos_spike_output - neg_spike_output)
