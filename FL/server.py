@@ -25,7 +25,7 @@ def get_on_fit_config(config: DictConfig):
 
     return fit_config_function
 
-
+#TODO Make this general so then it nice easy and switch 
 def get_evaluate_fn(model_cfg, testLoader):
     def evaluate_fn(server_round: int, parameters, config):
         model = instantiate(model_cfg)
