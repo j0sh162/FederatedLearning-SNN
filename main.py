@@ -25,12 +25,14 @@ def main(cfg: DictConfig):
     # 2. Prepare dataset
     dataset_name = cfg.dataset.name
     dataset_path = cfg.datasets[dataset_name].path
+    print(f'IID: {cfg.fl.non_iid}')
     trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
         dataset_name,
         dataset_path,
         cfg.fl.num_clients,
         cfg.datasets[dataset_name].batch_size,  # was originally cfg.fl.batch_size
         0.1,
+        cfg.fl.non_iid
     )
     print(len(trainLoaders), len(trainLoaders[0].dataset))
 
@@ -41,7 +43,7 @@ def main(cfg: DictConfig):
     )
 
     # 4. Define Strategy
-    """strategy = fl.server.strategy.FedAvg(fraction_fit=0.00001,
+    """strategy = fl.server.strategy.FedAvg(fraction_shas=0.00001,
                                           min_fit_clients=cfg.client.num_clients_per_round_fit,
                                           fraction_evaluate=0.00001,
                                           min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
