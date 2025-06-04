@@ -1,0 +1,75 @@
+strategy:
+  _target_: flwr.server.strategy.FedAdam
+  fraction_fit: 1.0e-05
+  min_fit_clients: ${client.num_clients_per_round_fit}
+  fraction_evaluate: 1.0e-05
+  min_evaluate_clients: ${client.num_clients_per_round_fit}
+  min_available_clients: ${fl.num_clients}
+  on_fit_config_fn:
+    _target_: FL.server.get_on_fit_config
+    config: ${client}
+  eta: 0.2
+  eta_l: 0.1
+  tau: 0.1
+  initial_parameters:
+    _target_: FL.training_utils.model_to_parameters
+    model: ${model}
+model:
+  _target_: SNN_Models.snn_spide_mnist_lenet.SNNSPIDEConvMultiLayerNet
+  cfg:
+    MODEL:
+      c_in: 1
+      c_hidden: 15
+      c_s1: 40
+      h_hidden: 28
+      w_hidden: 28
+      fc_num: 300
+      num_classes: ${client.num_classes}
+      kernel_size_x: 5
+      stride_x: 1
+      padding_x: 2
+      pooling_x: true
+      kernel_size_s: 3
+      time_step: 10
+      time_step_back: 5
+      vth: 1.0
+      vth_back: 1.0
+      u_rest: 0.0
+      u_rest_back: 0.0
+      dropout: 0.0
+      leaky: null
+fl:
+  num_rounds: 2
+  num_clients: 100
+  batch_size: 20
+client:
+  lr: 0.02
+  betas:
+  - 0.9
+  - 0.999
+  momentum: 0.9
+  local_epochs: 3
+  num_classes: 10
+  num_clients_per_round_fit: 5
+  num_clients_per_round_evaluate: 10
+dataset:
+  name: NMNIST
+datasets:
+  mnist:
+    path: ./data/mnist
+    input_size: 28
+    channels: 1
+    num_classes: 10
+    batch_size: 32
+  cifar10:
+    path: ./data/cifar10
+    input_size: 32
+    channels: 3
+    num_classes: 10
+    batch_size: 64
+  NMNIST:
+    path: ./data
+    input_size: 34
+    channels: 2
+    num_classes: 10
+    batch_size: 50

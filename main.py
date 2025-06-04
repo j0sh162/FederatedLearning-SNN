@@ -1,9 +1,11 @@
 # Main class to run federated learning
+import gc
 import pickle
 from pathlib import Path
 
 import flwr as fl
 import hydra
+import torch
 from flwr.server.strategy import (
     DifferentialPrivacyClientSideFixedClipping,
     DifferentialPrivacyServerSideFixedClipping,
@@ -27,12 +29,14 @@ def main(cfg: DictConfig):
     # 2. Prepare dataset
     dataset_name = cfg.dataset.name
     dataset_path = cfg.datasets[dataset_name].path
+    print(f"IID: {cfg.fl.non_iid}")
     trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
         dataset_name,
         dataset_path,
         cfg.fl.num_clients,
         cfg.datasets[dataset_name].batch_size,  # was originally cfg.fl.batch_size
         0.1,
+        cfg.fl.non_iid,
     )
     print(len(trainLoaders), len(trainLoaders[0].dataset))
 
@@ -43,13 +47,13 @@ def main(cfg: DictConfig):
     )
 
     # 4. Define Strategy
-    # strategy = fl.server.strategy.FedAvg(fraction_fit=0.00001,
-    #                                      min_fit_clients=cfg.client.num_clients_per_round_fit,
-    #                                      fraction_evaluate=0.00001,
-    #                                      min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
-    #                                      min_available_clients=cfg.fl.num_clients,
-    #                                      on_fit_config_fn=get_on_fit_config(cfg.client),
-    #                                      evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader)) #At the end of aggregation we obtain new global model and evaluate it
+    """strategy = fl.server.strategy.FedAvg(fraction_shas=0.00001,
+                                          min_fit_clients=cfg.client.num_clients_per_round_fit,
+                                          fraction_evaluate=0.00001,
+                                          min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
+                                          min_available_clients=cfg.fl.num_clients,
+                                          on_fit_config_fn=get_on_fit_config(cfg.client),
+                                          evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader))"""  # At the end of aggregation we obtain new global model and evaluate it
     base_strategy = instantiate(
         cfg.strategy, evaluate_fn=get_evaluate_fn(cfg.model, testLoader)
     )
