@@ -1,8 +1,10 @@
 """Local server that trains the model among all clients"""
 
 from collections import OrderedDict
+from typing import List, Tuple
 
 import torch
+from flwr.common import Metrics
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ray import client
@@ -29,10 +31,15 @@ def get_on_fit_config(config: DictConfig):
 def get_evaluate_fn(model_cfg, testLoader):
     def evaluate_fn(server_round: int, parameters, config):
         model = instantiate(model_cfg)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = (
+            torch.device("cuda")
+            if torch.cuda.is_available()
+            else torch.device("mps")
+            if torch.backends.mps.is_available()
+            else torch.device("cpu")
+        )
         # device = torch.device("cpu")
         # dictionary = model.state_dict()
-        print("client", server_round)
         # print("length before: ", len(dictionary))
         # for k,v in dictionary.items():
         #    print(f"{k}: {v}")
@@ -49,6 +56,7 @@ def get_evaluate_fn(model_cfg, testLoader):
         # print("parameters in server: ", parameters, "client", server_round)
         # TODO Adjust for use with different models
         loss, accuracy = SNN_utils.test(model, testLoader, device)
+        print(loss, accuracy)
         return loss, {"accuracy": accuracy}
 
     return evaluate_fn

@@ -3,7 +3,7 @@ from typing import Dict
 
 import flwr as fl
 import torch
-from flwr.common import NDArrays, Scalar
+from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
 from rich import print
 
@@ -17,6 +17,7 @@ class FlowerClient(fl.client.NumPyClient):
         self.trainloader = trainloader
         self.valloader = valloader
         self.model = instantiate(model_cfg)
+        self.model_cfg = model_cfg
         # run on GPU if available else CPU
         self.device = (
             torch.device("cuda")
@@ -45,34 +46,17 @@ class FlowerClient(fl.client.NumPyClient):
         # copy parameters sent by server into client's local model
         self.set_params(parameters)
 
-        # training model locally
-        # print(
-        #     "lr ",
-        #     config["lr"],
-        #     " momentum ",
-        #     config["momentum"],
-        #     " local_epochs ",
-        #     config["local_epochs"],
-        # )
-        # optim = torch.optim.SGD(
-        #     self.model.parameters(),
-        #     lr=config["lr"],
-        #     momentum=config["momentum"],
-        # )
-        # TODO ADAM optimizer might need to be adjusted to work properly in FL as it
-        #     # it changes its parameters in time
         optim = torch.optim.AdamW(
             self.model.parameters(),
             lr=config["lr"],
             betas=[0.9, 0.999],
             # betas=config["betas"],
         )
-        # if config["model"]["name"] == "SNN":
-        if True:
+        if self.model_cfg._target_ == "SNN_Models.SNN.Net":
             SNN_utils.train(
                 self.model, self.trainloader, optim, config["local_epochs"], self.device
             )
-        else:
+        elif self.model_cfg._target_ == "FL.CNN.Net":
             train(
                 self.model, self.trainloader, optim, config["local_epochs"], self.device
             )
@@ -95,11 +79,12 @@ def generate_client_fn(trainloaders, valloaders, model_cfg):
     """spawning clients for simulation"""
 
     def client_fn(clientID: str):
+        # TODO Add context: Context as argument as this way is deprecated
         print("client function with id ", clientID)
         return FlowerClient(
             trainloader=trainloaders[int(clientID)],
             valloader=valloaders[int(clientID)],
             model_cfg=model_cfg,
-        )
+        ).to_client()
 
     return client_fn

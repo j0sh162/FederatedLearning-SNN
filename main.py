@@ -1,16 +1,20 @@
 # Main class to run federated learning
+import gc
 import pickle
 from pathlib import Path
 
 import flwr as fl
 import hydra
+import torch
+from flwr.server.strategy import (
+    DifferentialPrivacyClientSideFixedClipping,
+    DifferentialPrivacyServerSideFixedClipping,
+)
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from rich import print
 from sympy import evaluate
-from flwr.server.strategy import DifferentialPrivacyClientSideFixedClipping, DifferentialPrivacyServerSideFixedClipping
-import torch, gc
 
 from FL.client import generate_client_fn
 from FL.server import get_evaluate_fn, get_on_fit_config
@@ -25,14 +29,14 @@ def main(cfg: DictConfig):
     # 2. Prepare dataset
     dataset_name = cfg.dataset.name
     dataset_path = cfg.datasets[dataset_name].path
-    print(f'IID: {cfg.fl.non_iid}')
+    print(f"IID: {cfg.fl.non_iid}")
     trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
         dataset_name,
         dataset_path,
         cfg.fl.num_clients,
         cfg.datasets[dataset_name].batch_size,  # was originally cfg.fl.batch_size
         0.1,
-        cfg.fl.non_iid
+        cfg.fl.non_iid,
     )
     print(len(trainLoaders), len(trainLoaders[0].dataset))
 
@@ -49,7 +53,7 @@ def main(cfg: DictConfig):
                                           min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
                                           min_available_clients=cfg.fl.num_clients,
                                           on_fit_config_fn=get_on_fit_config(cfg.client),
-                                          evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader))""" #At the end of aggregation we obtain new global model and evaluate it
+                                          evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader))"""  # At the end of aggregation we obtain new global model and evaluate it
     base_strategy = instantiate(
         cfg.strategy, evaluate_fn=get_evaluate_fn(cfg.model, testLoader)
     )
@@ -60,7 +64,7 @@ def main(cfg: DictConfig):
             base_strategy,
             cfg.fl.noise_multiplier,
             cfg.fl.clipping_norm,
-            cfg.fl.num_sampled_clients
+            cfg.fl.num_sampled_clients,
         )
     else:
         strategy = base_strategy
@@ -72,9 +76,9 @@ def main(cfg: DictConfig):
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
         client_resources={
-            "num_cpus": 1,  # was 2
-            "num_gpus": 0.5 if torch.cuda.is_available() else 0,  # use 0.5 gpu if available
-        }  # run client concurrently on gpu 0.25 = 4 clients concurrently
+            "num_cpus": 2,  # was 2
+            "num_gpus": 0,
+        },  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results
     save_path = HydraConfig.get().runtime.output_dir
