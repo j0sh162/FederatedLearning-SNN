@@ -2,7 +2,6 @@
 import gc
 import logging
 import pickle
-import sys
 from pathlib import Path
 
 import flwr as fl
@@ -86,7 +85,9 @@ def main(cfg: DictConfig):
         strategy=strategy,
         client_resources={
             "num_cpus": 1,  # was 2
-            "num_gpus": 0.25,
+            "num_gpus": 0.25
+            if torch.cuda.is_available()
+            else 0,  # use 0.5 gpu if available
         },  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results

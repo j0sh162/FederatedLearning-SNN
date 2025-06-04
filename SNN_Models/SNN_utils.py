@@ -52,6 +52,9 @@ def test(net, testloader, device: str):
             i += 1
             if i > 10:  # Stop after 10 batches
                 break
+
+    if len(loss_hist) == 0:
+        return 0.0, 0.0
     loss = sum(loss_hist) / len(loss_hist)
     accuracy = sum(acc_hist) / len(acc_hist)
     return loss, accuracy
