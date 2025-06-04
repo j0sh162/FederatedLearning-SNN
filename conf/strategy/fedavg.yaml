@@ -1,6 +1,6 @@
 ---
 _target_: flwr.server.strategy.FedAvg #flower FedAvg function path, below all required parameters defined for this function
-fraction_fit: 1.0
+fraction_fit: 0.05
 min_fit_clients: ${client.num_clients_per_round_fit}
 fraction_evaluate: 0.5
 min_evaluate_clients: ${client.num_clients_per_round_fit}

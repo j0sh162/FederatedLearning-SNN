@@ -25,7 +25,7 @@ def get_NMNIST_dataset(path):
     frame_transform = tonic.transforms.Compose(
         [
             tonic.transforms.Denoise(filter_time=10000),
-            tonic.transforms.ToFrame(sensor_size=sensor_size, time_window=1000),
+            tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
         ]
     )
     trainset = tonic.datasets.NMNIST(
