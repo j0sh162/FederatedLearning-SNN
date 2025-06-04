@@ -99,7 +99,7 @@ def dirichlet_non_iid_partition(trainSet, num_clients, num_classes=10, alpha=0.5
     return client_datasets
 
 def load_dataset(
-    name, path, num_partitions: int, batch_size: int, val_ratio: float = 0.1, iid = True
+    name, path, num_partitions: int, batch_size: int, val_ratio: float = 0.1, non_iid = True
 ):
     """val_ratio is used to vary data amount among clients"""
     transform = transforms.ToTensor()
@@ -117,7 +117,7 @@ def load_dataset(
         raise ValueError(f"Unsupported dataset: {name}")
 
     # split trainset into partitioned trainsets - below has equal size partitions but can be changed
-    if not iid:
+    if non_iid:
         trainsets = dirichlet_non_iid_partition(trainSet, num_partitions)
     else:
         num_images = len(trainSet) // num_partitions
