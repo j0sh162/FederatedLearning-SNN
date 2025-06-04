@@ -72,8 +72,8 @@ def main(cfg: DictConfig):
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
         client_resources={
-            "num_cpus": 8,  # was 2
-            "num_gpus": 1,
+            "num_cpus": 2,  # was 2
+            "num_gpus": 0,
         },  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results
