@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+import numpy as np
 import tonic
 import torch
 import numpy as np
@@ -14,15 +17,6 @@ def get_MNISTdataset(path):
     test = datasets.MNIST(root=path, train=False, download=True, transform=tr)
     return train, test
 
-def get_MNISTdataset(path, limit=1000):
-    tr = Compose([ToTensor(), Normalize((0.1307,), (0.3081,))])
-    train = datasets.MNIST(root=path, train=True, download=True, transform=tr)
-    test = datasets.MNIST(root=path, train=False, download=True, transform=tr)
-    # Restrict to smaller subset
-    train, _ = random_split(train, [limit, len(train) - limit], generator=torch.Generator().manual_seed(42))
-    test, _ = random_split(test, [limit, len(test) - limit], generator=torch.Generator().manual_seed(42))
-    return train, test
-
 
 def get_CIFARdataset(path):
     tr = Compose([ToTensor(), Normalize((0.1307,), (0.3081,))])
@@ -31,41 +25,34 @@ def get_CIFARdataset(path):
     return train, test
 
 
-def get_NMNIST_dataset(path):
+"""def get_NMNIST_dataset(path):
     sensor_size = tonic.datasets.NMNIST.sensor_size
     frame_transform = tonic.transforms.Compose(
         [
             tonic.transforms.Denoise(filter_time=10000),
-            tonic.transforms.ToFrame(sensor_size=sensor_size, time_window=1000),
+            tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
         ]
     )
     trainset = tonic.datasets.NMNIST(
-        save_to="./data", transform=frame_transform, train=True
+        save_to="./data",
+        transform=tonic.transforms.Compose(
+            [frame_transform, torch.from_numpy, RandomRotation([-10, 10])]
+        ),
+        train=True,
     )
     testset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=False
     )
-    split = 0.5
-    trainset = random_split(
-        trainset,
-        [split, 1 - split],
-        generator=torch.Generator().manual_seed(42),
-    )[0]
-    testset = random_split(
-        testset,
-        [split, 1 - split],
-        generator=torch.Generator().manual_seed(42),
-    )[0]
-    trainset = MemoryCachedDataset(
-        trainset,
-        transform=tonic.transforms.Compose(
-            [torch.from_numpy, RandomRotation([-10, 10])]
-        ),
-    )
-    testset = MemoryCachedDataset(testset)
-    return trainset, testset
+    # trainset = MemoryCachedDataset(
+    #     trainset,
+    #     transform=tonic.transforms.Compose(
+    #         [frame_transform, torch.from_numpy, RandomRotation([-10, 10])]
+    #     ),
+    # )
+    # testset = MemoryCachedDataset(testset)
+    return trainset, testset"""
 
-"""def get_NMNIST_dataset(path, limit=1000):
+def get_NMNIST_dataset(path, limit=1000):
     sensor_size = tonic.datasets.NMNIST.sensor_size
     frame_transform = tonic.transforms.Compose(
         [
@@ -100,7 +87,7 @@ def get_NMNIST_dataset(path):
     )
     testset = MemoryCachedDataset(testset)
 
-    return trainset, testset"""
+    return trainset, testset
 
 def get_dataset_targets(dataset):
     """Retrieve labels from dataset even if it doesn't have a 'targets' attribute."""
@@ -123,7 +110,9 @@ def non_iid_partition(trainSet, num_clients, num_classes=10, samples_per_class=1
         for client_id in range(num_clients):
             client_indices[client_id].extend(split[client_id])
 
-    client_datasets = [torch.utils.data.Subset(trainSet, inds) for inds in client_indices]
+    client_datasets = [
+        torch.utils.data.Subset(trainSet, inds) for inds in client_indices
+    ]
     return client_datasets
 
 def dirichlet_non_iid_partition(dataset, num_clients, num_classes=10, alpha=0.5, min_size=1):
@@ -150,8 +139,14 @@ def dirichlet_non_iid_partition(dataset, num_clients, num_classes=10, alpha=0.5,
 
     return [torch.utils.data.Subset(dataset, ids) for ids in client_idx]
 
+
 def load_dataset(
-    name, path, num_partitions: int, batch_size: int, val_ratio: float = 0.1, non_iid = True
+    name,
+    path,
+    num_partitions: int,
+    batch_size: int,
+    val_ratio: float = 0.1,
+    non_iid=True,
 ):
     """val_ratio is used to vary data amount among clients"""
     transform = transforms.ToTensor()
