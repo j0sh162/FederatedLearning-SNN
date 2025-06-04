@@ -1,7 +1,8 @@
+from collections import defaultdict
+
+import numpy as np
 import tonic
 import torch
-import numpy as np
-from collections import defaultdict
 from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
@@ -31,18 +32,22 @@ def get_NMNIST_dataset(path):
         ]
     )
     trainset = tonic.datasets.NMNIST(
-        save_to="./data", transform=frame_transform, train=True
+        save_to="./data",
+        transform=tonic.transforms.Compose(
+            [frame_transform, torch.from_numpy, RandomRotation([-10, 10])]
+        ),
+        train=True,
     )
     testset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=False
     )
-    trainset = MemoryCachedDataset(
-        trainset,
-        transform=tonic.transforms.Compose(
-            [torch.from_numpy, RandomRotation([-10, 10])]
-        ),
-    )
-    testset = MemoryCachedDataset(testset)
+    # trainset = MemoryCachedDataset(
+    #     trainset,
+    #     transform=tonic.transforms.Compose(
+    #         [frame_transform, torch.from_numpy, RandomRotation([-10, 10])]
+    #     ),
+    # )
+    # testset = MemoryCachedDataset(testset)
     return trainset, testset
 
 
@@ -59,8 +64,11 @@ def non_iid_partition(trainSet, num_clients, num_classes=10, samples_per_class=1
         for client_id in range(num_clients):
             client_indices[client_id].extend(split[client_id])
 
-    client_datasets = [torch.utils.data.Subset(trainSet, inds) for inds in client_indices]
+    client_datasets = [
+        torch.utils.data.Subset(trainSet, inds) for inds in client_indices
+    ]
     return client_datasets
+
 
 def dirichlet_non_iid_partition(trainSet, num_clients, num_classes=10, alpha=0.5):
     targets = np.array(trainSet.targets)
@@ -84,11 +92,19 @@ def dirichlet_non_iid_partition(trainSet, num_clients, num_classes=10, alpha=0.5
         for client_id, client_split in enumerate(split):
             client_indices[client_id].extend(client_split)
 
-    client_datasets = [torch.utils.data.Subset(trainSet, inds) for inds in client_indices]
+    client_datasets = [
+        torch.utils.data.Subset(trainSet, inds) for inds in client_indices
+    ]
     return client_datasets
 
+
 def load_dataset(
-    name, path, num_partitions: int, batch_size: int, val_ratio: float = 0.1, non_iid = True
+    name,
+    path,
+    num_partitions: int,
+    batch_size: int,
+    val_ratio: float = 0.1,
+    non_iid=True,
 ):
     """val_ratio is used to vary data amount among clients"""
     transform = transforms.ToTensor()

@@ -23,7 +23,7 @@ client:
 
 #Dataset selection
 dataset:
-  name: NMNIST  # Change to "cifar10" to switch dataset
+  name: mnist  # Change to "cifar10" to switch dataset
 
 # Dataset-specific configs
 datasets:
@@ -48,5 +48,5 @@ datasets:
 
 defaults: #Here we define which model and strategy we wish to use,
   - strategy: fedavg #create a config in conf/strategy and define the strategy parameters
-  - model: SNN #create a model yaml in conf/model and define the input parameters for that model
+  - model: net #create a model yaml in conf/model and define the input parameters for that model
 

@@ -66,10 +66,9 @@ class FlowerClient(fl.client.NumPyClient):
     def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):
         """Receive parameters from global model and evaluate local validation set and return wanted information in this case: loss/accuracy"""
         self.set_params(parameters)
-        # if config["model"] == "SNN":
-        if True:
+        if self.model_cfg._target_ == "SNN_Models.SNN.Net":
             loss, accuracy = SNN_utils.test(self.model, self.valloader, self.device)
-        else:
+        elif self.model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}
 
