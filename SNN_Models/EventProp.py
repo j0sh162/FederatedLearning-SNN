@@ -172,7 +172,7 @@ def test(model, loader, T):
     with torch.no_grad():
         for batch_idx, (data, target) in enumerate(loader):
             data, target = data.to(device), target.to(device)
-            spike_data = spike_data.view(spike_data.shape[0], -1, T)
+            spike_data = data.view(data.shape[0], -1, T)
 
             first_post_spikes = model(spike_data)
             predictions = first_post_spikes.data.min(1, keepdim=True)[1]
