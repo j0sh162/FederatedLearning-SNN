@@ -1,6 +1,8 @@
 # Main class to run federated learning
 import gc
+import logging
 import pickle
+import sys
 from pathlib import Path
 
 import flwr as fl
@@ -14,6 +16,7 @@ from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from rich import print
+from rich.logging import RichHandler
 from sympy import evaluate
 
 from FL.client import generate_client_fn
@@ -25,6 +28,12 @@ from Training import dataset
 def main(cfg: DictConfig):
     # 1. Parse config and get experiment output dir
     print(OmegaConf.to_yaml(cfg))
+    logger = logging.getLogger("flwr")
+
+    logger.info(
+        "Starting Flower simulation, config: num_rounds=%d",
+        cfg.fl.num_rounds,
+    )
 
     # 2. Prepare dataset
     dataset_name = cfg.dataset.name
@@ -76,8 +85,8 @@ def main(cfg: DictConfig):
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
         client_resources={
-            "num_cpus": 2,  # was 2
-            "num_gpus": 0,
+            "num_cpus": 1,  # was 2
+            "num_gpus": 0.25,
         },  # run client concurrently on gpu 0.25 = 4 clients concurrently
     )
     # 6. Save results
@@ -89,4 +98,24 @@ def main(cfg: DictConfig):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level="NOTSET",
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(markup=True, rich_tracebacks=True)],
+    )
+
+    flwr_logger = logging.getLogger("flwr")
+    flwr_logger.setLevel(logging.INFO)
+    flwr_logger.propagate = False
+    for handler in flwr_logger.handlers[:]:
+        flwr_logger.removeHandler(handler)
+    flwr_logger.addHandler(RichHandler(markup=True, rich_tracebacks=True))
+
+    ray_logger = logging.getLogger("ray")
+    ray_logger.setLevel(logging.INFO)
+    ray_logger.propagate = False
+    for handler in ray_logger.handlers[:]:
+        ray_logger.removeHandler(handler)
+    ray_logger.addHandler(RichHandler(markup=True, rich_tracebacks=True))
     main()

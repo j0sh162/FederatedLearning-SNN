@@ -1,4 +1,5 @@
 import torch
+from flwr import common
 from snntorch import functional as SF
 
 
@@ -23,11 +24,11 @@ def train(net, train_loader, optimizer, epochs, device: str):
                 optimizer.step()
 
                 acc = SF.accuracy_rate(spk_rec, targets)
-                print(
-                    "Epoch {:02d} | Batch {:03d}/{:03d} | Loss {:05.2f} | Accuracy {:05.2f}%".format(
-                        epoch, batch_number, num_batches, loss_val.item(), acc * 100
-                    )
-                )
+                # print(
+                #     "Epoch {:02d} | Batch {:03d}/{:03d} | Loss {:05.2f} | Accuracy {:05.2f}%".format(
+                #         epoch, batch_number, num_batches, loss_val.item(), acc * 100
+                #     ),
+                # )
             except Exception as e:
                 print("Error in training loop:", e)
                 break
