@@ -4,7 +4,7 @@ fl:
   num_rounds: 10
   num_clients: 100
   batch_size: 20
-  non_iid: True
+  non_iid: False # Set to false for iid; Set to true for non-iid
   differential_privacy: False
   noise_multiplier: 0.5
   clipping_norm: 0.3 # Recommendation by Flower

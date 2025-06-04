@@ -25,7 +25,7 @@ def main(cfg: DictConfig):
     # 2. Prepare dataset
     dataset_name = cfg.dataset.name
     dataset_path = cfg.datasets[dataset_name].path
-    print(f'IID: {cfg.fl.non_iid}')
+    print(f'non-IID: {cfg.fl.non_iid}')
     trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
         dataset_name,
         dataset_path,
