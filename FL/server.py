@@ -1,5 +1,6 @@
 """Local server that trains the model among all clients"""
 
+import logging
 from collections import OrderedDict
 from typing import List, Tuple
 
@@ -12,6 +13,8 @@ from ray import client
 from FL.CNN import Net
 from FL.training_utils import test
 from SNN_Models import SNN_utils
+
+logger = logging.getLogger("rich")
 
 
 def get_on_fit_config(config: DictConfig):

@@ -5,7 +5,7 @@ import flwr as fl
 import torch
 from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
-from rich import print
+from rich.logging import RichHandler
 
 from FL.training_utils import test, train
 from SNN_Models import SNN_utils
@@ -79,7 +79,7 @@ def generate_client_fn(trainloaders, valloaders, model_cfg):
 
     def client_fn(clientID: str):
         # TODO Add context: Context as argument as this way is deprecated
-        print("client function with id ", clientID)
+        # print(f"Generate client function with id {clientID}")
         return FlowerClient(
             trainloader=trainloaders[int(clientID)],
             valloader=valloaders[int(clientID)],
