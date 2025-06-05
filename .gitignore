@@ -55,6 +55,7 @@ cover/
 *.mo
 *.pot
 
+outputs/
 # Django stuff:
 *.log
 local_settings.py
@@ -176,3 +177,4 @@ cython_debug/
 data
 runs
 save_models
+outputs
