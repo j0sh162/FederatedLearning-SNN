@@ -105,8 +105,11 @@ for epoch in range(num_epochs):
         loss_val.backward()
         optimizer.step()
 
-        acc = SF.accuracy_rate(spk_rec, targets)
-        test_loss, test_acc = test(snn_net, test_loader, device)
+        snn_net.net.eval()
+        with torch.no_grad():
+            acc = SF.accuracy_rate(spk_rec, targets)
+            test_loss, test_acc = test(snn_net, test_loader, device)
+
         hist.append([epoch, batch_number, loss_val.item(), acc, "train"])
         hist.append([epoch, batch_number, test_loss, test_acc, "test"])
 
