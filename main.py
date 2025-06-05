@@ -1,85 +1,101 @@
 # Main class to run federated learning
+import gc
+import logging
 import pickle
 from pathlib import Path
-import tonic
 
 import flwr as fl
 import hydra
+import torch
+#from flwr.server.strategy import (
+#    DifferentialPrivacyClientSideFixedClipping,
+#    DifferentialPrivacyServerSideFixedClipping,
+#)
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig, OmegaConf
 from rich import print
+from rich.logging import RichHandler
 from sympy import evaluate
 
-from FL.client import generate_client_fn
+from FL.biogradClient import generate_client_fn
 from FL.server import get_evaluate_fn, get_on_fit_config
 from Training import dataset
 
-from SNN_Models.training_biograd import biograd_snn_training
-from SNN_Models.online_error_functions import cross_entropy_loss_error_function
-from torch.utils.data import DataLoader, sampler
-
+from biograd.online_error_functions import cross_entropy_loss_error_function
+from FL.biogradClient import model_to_parameters
+from omegaconf import OmegaConf
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def main(cfg: DictConfig):
+    
     # 1. Parse config and get experiment output dir
     print(OmegaConf.to_yaml(cfg))
+    logger = logging.getLogger("flwr")
+
+    logger.info(
+        "Starting Flower simulation, config: num_rounds=%d",
+        cfg.fl.num_rounds,
+    )
 
     # 2. Prepare dataset
-    snn_ts = 20 # was 60, changed to 20 to fall in line with other methods like EventProp
-    transform = tonic.transforms.Compose(
-        [
-            tonic.transforms.Denoise(filter_time=10000),
-            tonic.transforms.ToFrame(sensor_size=tonic.datasets.NMNIST.sensor_size, n_time_bins=snn_ts),
-        ]
-    )    # Read N-MNIST data
-
-    validation_size = 10000
-    train_dataset = tonic.datasets.NMNIST("data", train=True, transform=transform)
-    train_idx = [idx for idx in range(len(train_dataset) - validation_size)]
-    val_idx = [(idx + len(train_idx)) for idx in range(validation_size)]
-    train_sampler = sampler.SubsetRandomSampler(train_idx)
-    val_sampler = sampler.SubsetRandomSampler(val_idx)
-    train_dataloader = DataLoader(train_dataset, batch_size=1, sampler=train_sampler,
-                                  shuffle=False, num_workers=4)
-
-    test_dataset = tonic.datasets.NMNIST("data", train=False, transform=transform)
-    test_idx = [idx for idx in range(len(test_dataset))]
-    #val_idx = [(idx + len(train_idx)) for idx in range(validation_size)]
-    test_sampler = sampler.SubsetRandomSampler(test_idx)
-    val_dataloader = DataLoader(train_dataset, batch_size=1, sampler=val_sampler,
-                                shuffle=False, num_workers=4)
-    #val_sampler = sampler.SubsetRandomSampler(val_idx)
-    test_dataloader = DataLoader(test_dataset, batch_size=1, sampler=test_sampler,
-                                  shuffle=False, num_workers=4)
+    dataset_name = cfg.dataset.name
+    dataset_path = cfg.datasets[dataset_name].path
+    print(f"IID: {cfg.fl.non_iid}")
+    trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
+        dataset_name,
+        dataset_path,
+        cfg.fl.num_clients,
+        cfg.datasets[dataset_name].batch_size,
+        cfg.datasets[dataset_name].test_batch_size,
+        0.1,
+    )
+    print(len(trainLoaders), len(trainLoaders[0].dataset))
 
     # 3. Define clients - allows to initialize clients
-    client_fn = generate_client_fn(train_dataloader, val_dataloader, cfg.model)
+    client_fn = generate_client_fn(trainLoaders, validationLoaders, cfg.model)
+
+    model_cfg = cfg.model.copy()
+    model = instantiate(model_cfg)
+    model.error_func = cross_entropy_loss_error_function
+    initial_parameters = model_to_parameters(model)
+
     print(
         "cfg num_rounds: ", cfg.fl.num_rounds, "cfg num classes", cfg.client.num_classes
     )
 
     # 4. Define Strategy
-    # strategy = fl.server.strategy.FedAvg(fraction_fit=0.00001,
-    #                                      min_fit_clients=cfg.client.num_clients_per_round_fit,
-    #                                      fraction_evaluate=0.00001,
-    #                                      min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
-    #                                      min_available_clients=cfg.fl.num_clients,
-    #                                      on_fit_config_fn=get_on_fit_config(cfg.client),
-    #                                      evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader)) #At the end of aggregation we obtain new global model and evaluate it
-    strategy = instantiate(
-        cfg.strategy, evaluate_fn=get_evaluate_fn(cfg.model, test_dataloader)
+    """strategy = fl.server.strategy.FedAvg(fraction_shas=0.00001,
+                                          min_fit_clients=cfg.client.num_clients_per_round_fit,
+                                          fraction_evaluate=0.00001,
+                                          min_evaluate_clients=cfg.client.num_clients_per_round_evaluate,
+                                          min_available_clients=cfg.fl.num_clients,
+                                          on_fit_config_fn=get_on_fit_config(cfg.client),
+                                          evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader))"""  # At the end of aggregation we obtain new global model and evaluate it
+    base_strategy = instantiate(
+        cfg.strategy,
+        evaluate_fn=get_evaluate_fn(cfg.model, testLoader),
+        initial_parameters=initial_parameters
     )
+
+    # Server-side central differential privacy
+    """if cfg.fl.differential_privacy:
+        strategy = DifferentialPrivacyServerSideFixedClipping(
+            base_strategy,
+            cfg.fl.noise_multiplier,
+            cfg.fl.clipping_norm,
+            cfg.fl.num_sampled_clients,
+        )
+    else:"""
+    strategy = base_strategy
+
     # 5. Run your simulation
     history = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=cfg.fl.num_clients,
         config=fl.server.ServerConfig(num_rounds=cfg.fl.num_rounds),
         strategy=strategy,
-        client_resources={
-            "num_cpus": 2,  # was 2
-            "num_gpus": 1,
-        },  # run client concurrently on gpu 0.25 = 4 clients concurrently
+        client_resources={"num_cpus": 6, "num_gpus": 1}
     )
     # 6. Save results
     save_path = HydraConfig.get().runtime.output_dir
@@ -90,4 +106,24 @@ def main(cfg: DictConfig):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level="NOTSET",
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(markup=True, rich_tracebacks=True)],
+    )
+
+    flwr_logger = logging.getLogger("flwr")
+    flwr_logger.setLevel(logging.INFO)
+    flwr_logger.propagate = False
+    for handler in flwr_logger.handlers[:]:
+        flwr_logger.removeHandler(handler)
+    flwr_logger.addHandler(RichHandler(markup=True, rich_tracebacks=True))
+
+    ray_logger = logging.getLogger("ray")
+    ray_logger.setLevel(logging.INFO)
+    ray_logger.propagate = False
+    for handler in ray_logger.handlers[:]:
+        ray_logger.removeHandler(handler)
+    ray_logger.addHandler(RichHandler(markup=True, rich_tracebacks=True))
     main()

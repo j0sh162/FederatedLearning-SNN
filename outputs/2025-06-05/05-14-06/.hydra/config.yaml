@@ -1,0 +1,74 @@
+strategy:
+  _target_: flwr.server.strategy.FedAdam
+  fraction_fit: 1.0e-05
+  min_fit_clients: ${client.num_clients_per_round_fit}
+  fraction_evaluate: 1.0e-05
+  min_evaluate_clients: ${client.num_clients_per_round_fit}
+  min_available_clients: ${fl.num_clients}
+  on_fit_config_fn:
+    _target_: FL.server.get_on_fit_config
+    config: ${client}
+  eta: 0.2
+  eta_l: 0.1
+  tau: 0.1
+model:
+  _target_: biograd.network_w_biograd.BioGradNetworkWithSleep
+  input_dim: 2312
+  output_dim: ${client.num_classes}
+  hidden_dim_list:
+  - 500
+  - 100
+  param_dict:
+    hidden_layer:
+    - - 0.3
+      - 0.3
+      - 0.3
+      - 1.0
+    - - 0.3
+      - 0.3
+      - 0.3
+      - 1.0
+    out_layer:
+    - 0.3
+    - 0.3
+    - 0.3
+    - 1.0
+  device: cuda
+  error_func: null
+fl:
+  num_rounds: 2
+  num_clients: 2
+  batch_size: 128
+  non_iid: false
+client:
+  lr: 0.02
+  betas:
+  - 0.9
+  - 0.999
+  momentum: 0.9
+  local_epochs: 1
+  num_classes: 10
+  num_clients_per_round_fit: 2
+  num_clients_per_round_evaluate: 1
+dataset:
+  name: NMNIST
+datasets:
+  mnist:
+    path: ./data/mnist
+    input_size: 28
+    channels: 1
+    num_classes: 10
+    batch_size: 32
+  cifar10:
+    path: ./data/cifar10
+    input_size: 32
+    channels: 3
+    num_classes: 10
+    batch_size: 64
+  NMNIST:
+    path: ./data
+    input_size: 34
+    channels: 2
+    num_classes: 10
+    batch_size: 16
+    test_batch_size: 1

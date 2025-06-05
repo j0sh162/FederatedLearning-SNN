@@ -55,9 +55,7 @@ def get_NMNIST_dataset(path):
     return trainset, testset
 
 
-def load_dataset(
-    name, path, num_partitions: int, batch_size: int, val_ratio: float = 0.1
-):
+def load_dataset(name, path, num_partitions: int, batch_size: int, test_batch_size: int, val_ratio: float = 0.1):
     """val_ratio is used to vary data amount among clients"""
     transform = transforms.ToTensor()
 
@@ -97,7 +95,7 @@ def load_dataset(
                 for_training,
                 batch_size=batch_size,
                 shuffle=True,
-                num_workers=2,
+                num_workers=0,
                 collate_fn=collate_fn,
             )
         )
@@ -106,7 +104,7 @@ def load_dataset(
                 for_validation,
                 batch_size=batch_size,
                 shuffle=False,
-                num_workers=2,
+                num_workers=0,
                 collate_fn=collate_fn,
             )
         )
@@ -114,7 +112,7 @@ def load_dataset(
     print("BATCH SIZE: ", batch_size)
     testList = DataLoader(
         testSet,
-        batch_size=batch_size,  # originally 128
+        batch_size=test_batch_size,  # originally 128
         collate_fn=collate_fn,
     )
     return trainingList, validationList, testList

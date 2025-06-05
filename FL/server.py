@@ -4,13 +4,12 @@ from collections import OrderedDict
 
 import torch
 from hydra.utils import instantiate
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from ray import client
+from biograd.online_error_functions import cross_entropy_loss_error_function
 
-from FL.CNN import Net
-from FL.training_utils import test
-from SNN_Models import SNN_utils
-
+from tqdm import tqdm
+import time
 
 def get_on_fit_config(config: DictConfig):
     def fit_config_function(server_round: int):
@@ -28,7 +27,9 @@ def get_on_fit_config(config: DictConfig):
 
 def get_evaluate_fn(model_cfg, testLoader):
     def evaluate_fn(server_round: int, parameters, config):
-        model = instantiate(model_cfg)
+        local_model_cfg = OmegaConf.to_container(model_cfg, resolve=True)
+        local_model_cfg["error_func"] = cross_entropy_loss_error_function
+        model = instantiate(local_model_cfg)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # device = torch.device("cpu")
         # dictionary = model.state_dict()
@@ -48,7 +49,22 @@ def get_evaluate_fn(model_cfg, testLoader):
         model.load_state_dict(state_dict, strict=True)
         # print("parameters in server: ", parameters, "client", server_round)
         # TODO Adjust for use with different models
-        loss, accuracy = SNN_utils.test(model, testLoader, device)
+        loss, accuracy = test(model, testLoader, device)
         return loss, {"accuracy": accuracy}
 
     return evaluate_fn
+
+def test(net, testloader, device: str):
+    with torch.no_grad():
+        test_num = len(testloader.dataset)
+        test_correct = 0
+        test_start = time.time()
+        for data in tqdm(testloader, desc="Test", leave=False):
+            event_img, labels = data
+            event_img, labels = event_img.to(device), labels.to(device)
+            predict_label = net.test(event_img)
+            test_correct += ((predict_label == labels).sum().to("cpu")).item()
+        test_end = time.time()
+        test_accuracy = test_correct / test_num
+        print("Test Accuracy %.4f Test Time: %.1f" % (test_accuracy, test_end - test_start), end=" ")
+        return 0.5, test_accuracy

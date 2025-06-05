@@ -3,9 +3,9 @@ from typing import Dict
 
 import flwr as fl
 import torch
-from flwr.common import NDArrays, Scalar
+from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
-from rich import print
+from rich.logging import RichHandler
 
 from FL.training_utils import test, train
 from SNN_Models import SNN_utils
@@ -17,8 +17,7 @@ class FlowerClient(fl.client.NumPyClient):
         self.trainloader = trainloader
         self.valloader = valloader
         self.model = instantiate(model_cfg)
-        if not isinstance(self.model, torch.nn.Module):
-            self.model = self.model()
+        self.model_cfg = model_cfg
         # run on GPU if available else CPU
         self.device = (
             torch.device("cuda")
@@ -47,40 +46,27 @@ class FlowerClient(fl.client.NumPyClient):
         # copy parameters sent by server into client's local model
         self.set_params(parameters)
 
-        # DEBUG: Check model type and parameters
-        print("DEBUG: Model type:", type(self.model))
-        params = list(self.model.parameters())
-        print("DEBUG: Number of model parameters:", len(params))
-        for name, param in self.model.named_parameters():
-            print(f"Param: {name}, requires_grad={param.requires_grad}, shape={param.shape}")
-
-        if len(params) == 0:
-            raise ValueError("The model has no trainable parameters! Check if it's correctly built.")
-
-        # Initialize optimizer
         optim = torch.optim.AdamW(
-            filter(lambda p: p.requires_grad, self.model.parameters()),
+            self.model.parameters(),
             lr=config["lr"],
             betas=[0.9, 0.999],
+            # betas=config["betas"],
         )
-
-        # Train the model
-        SNN_utils.train(
-            self.model, self.trainloader, optim, config["local_epochs"], self.device
-        )
-
-        # Return updated model parameters
+        if self.model_cfg._target_ == "SNN_Models.SNN.Net":
+            SNN_utils.train(
+                self.model, self.trainloader, optim, config["local_epochs"], self.device
+            )
+        elif self.model_cfg._target_ == "FL.CNN.Net":
+            train(
+                self.model, self.trainloader, optim, config["local_epochs"], self.device
+            )
+        # return updated model
         return self.get_parameters({}), len(self.trainloader), {}
-
 
     def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):
         """Receive parameters from global model and evaluate local validation set and return wanted information in this case: loss/accuracy"""
         self.set_params(parameters)
-        # if config["model"] == "SNN":
-        if True:
-            loss, accuracy = SNN_utils.test(self.model, self.valloader, self.device)
-        else:
-            loss, accuracy = test(self.model, self.valloader, self.device)
+        loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}
 
 
@@ -89,11 +75,27 @@ def generate_client_fn(trainloaders, valloaders, model_cfg):
     """spawning clients for simulation"""
 
     def client_fn(clientID: str):
-        print("client function with id ", clientID)
+        # TODO Add context: Context as argument as this way is deprecated
+        # print(f"Generate client function with id {clientID}")
         return FlowerClient(
             trainloader=trainloaders[int(clientID)],
             valloader=valloaders[int(clientID)],
             model_cfg=model_cfg,
-        )
+        ).to_client()
 
     return client_fn
+
+def test(net, testloader, device: str):
+    criterion = torch.nn.CrossEntropyLoss()
+    correct, loss = 0, 0.0
+    net.eval()
+    net.to(device)
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data[0].to(device), data[1].to(device)
+            outputs, _ = net(images)
+            loss += criterion(outputs, labels).item()
+            _, predicted = torch.max(outputs.data, 1)
+            correct += (predicted == labels).sum().item()
+    accuracy = correct / len(testloader.dataset)
+    return loss, accuracy
