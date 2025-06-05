@@ -5,7 +5,7 @@ import flwr as fl
 import torch
 from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
-from rich import print
+from rich.logging import RichHandler
 
 from FL.training_utils import test, train
 from SNN_Models import SNN_utils
@@ -66,10 +66,9 @@ class FlowerClient(fl.client.NumPyClient):
     def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):
         """Receive parameters from global model and evaluate local validation set and return wanted information in this case: loss/accuracy"""
         self.set_params(parameters)
-        # if config["model"] == "SNN":
-        if True:
+        if self.model_cfg._target_ == "SNN_Models.SNN.Net":
             loss, accuracy = SNN_utils.test(self.model, self.valloader, self.device)
-        else:
+        elif self.model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}
 
@@ -80,7 +79,7 @@ def generate_client_fn(trainloaders, valloaders, model_cfg):
 
     def client_fn(clientID: str):
         # TODO Add context: Context as argument as this way is deprecated
-        print("client function with id ", clientID)
+        # print(f"Generate client function with id {clientID}")
         return FlowerClient(
             trainloader=trainloaders[int(clientID)],
             valloader=valloaders[int(clientID)],
