@@ -25,7 +25,7 @@ def get_CIFARdataset(path):
     return train, test
 
 
-"""def get_NMNIST_dataset(path):
+def get_NMNIST_dataset(path):
     sensor_size = tonic.datasets.NMNIST.sensor_size
     frame_transform = tonic.transforms.Compose(
         [
@@ -50,9 +50,9 @@ def get_CIFARdataset(path):
     #     ),
     # )
     # testset = MemoryCachedDataset(testset)
-    return trainset, testset"""
+    return trainset, testset
 
-def get_NMNIST_dataset(path, limit=1000):
+"""def get_NMNIST_dataset(path, limit=1000):
     sensor_size = tonic.datasets.NMNIST.sensor_size
     frame_transform = tonic.transforms.Compose(
         [
@@ -87,7 +87,7 @@ def get_NMNIST_dataset(path, limit=1000):
     )
     testset = MemoryCachedDataset(testset)
 
-    return trainset, testset
+    return trainset, testset"""
 
 def get_dataset_targets(dataset):
     """Retrieve labels from dataset even if it doesn't have a 'targets' attribute."""
