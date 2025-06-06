@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 import sys
 import os
-sys.path.append('../')
+# sys.path.append('../')
 from modules.optimizations import VariationalHidDropout2d, weight_frob_norm_restriction
 
 

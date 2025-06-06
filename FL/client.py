@@ -7,7 +7,8 @@ from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
 from rich.logging import RichHandler
 
-from FL.training_utils import test, train
+# from FL.training_utils import test, train
+from SNN_Models import EventProp,Spide
 from SNN_Models import SNN_utils
 
 
@@ -52,15 +53,23 @@ class FlowerClient(fl.client.NumPyClient):
             betas=[0.9, 0.999],
             # betas=config["betas"],
         )
+        # if config["model"]["name"] == "SNN":
         if self.model_cfg._target_ == "SNN_Models.SNN.Net":
             SNN_utils.train(
                 self.model, self.trainloader, optim, config["local_epochs"], self.device
             )
-        elif self.model_cfg._target_ == "FL.CNN.Net":
-            train(
-                self.model, self.trainloader, optim, config["local_epochs"], self.device
+        elif self.model_cfg._target_ == "SNN_Models.EventProp.SNN":
+            EventProp.train(
+                self.model, optim, self.trainloader
             )
-        # return updated model
+        elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
+            Spide.train_fl(
+                self.model, self.trainloader,self.device, config["local_epochs"],config
+            )
+        # elif self.model_cfg._target_ == "FL.CNN.Net":
+        #     train(
+        #         self.model, self.trainloader, optim, config["local_epochs"], self.device
+        #     )
         return self.get_parameters({}), len(self.trainloader), {}
 
     def evaluate(self, parameters: NDArrays, config: Dict[str, Scalar]):

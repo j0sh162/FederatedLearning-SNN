@@ -25,6 +25,10 @@ def get_CIFARdataset(path):
     return train, test
 
 
+
+
+    
+
 def get_NMNIST_dataset(path):
     sensor_size = tonic.datasets.NMNIST.sensor_size
     frame_transform = tonic.transforms.Compose(
@@ -158,7 +162,7 @@ def load_dataset(
         trainSet, testSet = get_CIFARdataset(path)
         collate_fn = None
     elif name == "NMNIST":
-        trainSet, testSet = get_NMNIST_dataset(path)
+        trainSet, testSet = get_NMIST_T_BIN_dataset(20)
         collate_fn = tonic.collation.PadTensors(batch_first=False)
     else:
         raise ValueError(f"Unsupported dataset: {name}")

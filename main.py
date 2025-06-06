@@ -33,6 +33,8 @@ def main(cfg: DictConfig):
         "Starting Flower simulation, config: num_rounds=%d",
         cfg.fl.num_rounds,
     )
+    model = cfg.model
+    model = instantiate(model)
 
     # 2. Prepare dataset
     dataset_name = cfg.dataset.name
