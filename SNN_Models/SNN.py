@@ -20,7 +20,7 @@ class Net(nn.Module):
         num_hidden: int = 1,
         num_output: int = 10,
         spike_grad=surrogate.SparseFastSigmoid(),
-        beta: float = 0.5,
+        beta: float = 0.9,
     ):
         super().__init__()
 
@@ -31,15 +31,27 @@ class Net(nn.Module):
         self.spike_grad = spike_grad
         self.beta = beta
 
+        # self.net = nn.Sequential(
+        #     nn.Conv2d(in_channels=2, out_channels=12, kernel_size=5),  # 12x30x30
+        #     nn.MaxPool2d(kernel_size=2),  # 12x15x15
+        #     snn.Leaky(beta=self.beta, spike_grad=spike_grad, init_hidden=True),
+        #     nn.Conv2d(in_channels=12, out_channels=32, kernel_size=5),  # 32x11x11
+        #     nn.MaxPool2d(kernel_size=2),  # 32x5x5
+        #     snn.Leaky(beta=self.beta, spike_grad=spike_grad, init_hidden=True),
+        #     nn.Flatten(),
+        #     nn.Linear(in_features=32 * 5 * 5, out_features=10),
+        #     snn.Leaky(
+        #         beta=self.beta, spike_grad=spike_grad, init_hidden=True, output=True
+        #     ),
+        # ).to(device)
+
+        # Network based on: https://doi.org/10.48550/arXiv.2105.08810
         self.net = nn.Sequential(
-            nn.Conv2d(in_channels=2, out_channels=12, kernel_size=5),  # 12x30x30
-            nn.MaxPool2d(kernel_size=2),  # 12x15x15
-            snn.Leaky(beta=self.beta, spike_grad=spike_grad, init_hidden=True),
-            nn.Conv2d(in_channels=12, out_channels=32, kernel_size=5),  # 32x11x11
-            nn.MaxPool2d(kernel_size=2),  # 32x5x5
+            nn.Conv2d(in_channels=2, out_channels=32, kernel_size=5, stride=1),
+            nn.MaxPool2d(kernel_size=2),
             snn.Leaky(beta=self.beta, spike_grad=spike_grad, init_hidden=True),
             nn.Flatten(),
-            nn.Linear(in_features=32 * 5 * 5, out_features=10),
+            nn.Linear(in_features=32 * 15 * 15, out_features=10),
             snn.Leaky(
                 beta=self.beta, spike_grad=spike_grad, init_hidden=True, output=True
             ),
