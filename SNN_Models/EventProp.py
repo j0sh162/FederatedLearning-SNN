@@ -196,6 +196,7 @@ def test(model, loader, device):
         for batch_idx, (data, target) in enumerate(loader):
             data, target = data.to(device), target.to(device)
             spike_data = data.view(data.shape[0], -1, T)
+
             first_post_spikes = model(spike_data)
             loss = criterion(first_post_spikes, target)
             

@@ -1,5 +1,10 @@
+from collections import defaultdict
+
+import numpy as np
 import tonic
 import torch
+import numpy as np
+from collections import defaultdict
 from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
@@ -39,26 +44,55 @@ def get_NMNIST_dataset(path):
     frame_transform = tonic.transforms.Compose(
         [
             tonic.transforms.Denoise(filter_time=10000),
-            tonic.transforms.ToFrame(sensor_size=sensor_size, time_window=1000),
+            tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
         ]
     )
     trainset = tonic.datasets.NMNIST(
-        save_to="./data", transform=frame_transform, train=True
+        save_to="./data",
+        transform=tonic.transforms.Compose(
+            [frame_transform, torch.from_numpy, RandomRotation([-10, 10])]
+        ),
+        train=True,
     )
     testset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=False
     )
-    split = 0.5
-    trainset = random_split(
-        trainset,
-        [split, 1 - split],
+    # trainset = MemoryCachedDataset(
+    #     trainset,
+    #     transform=tonic.transforms.Compose(
+    #         [frame_transform, torch.from_numpy, RandomRotation([-10, 10])]
+    #     ),
+    # )
+    # testset = MemoryCachedDataset(testset)
+    return trainset, testset
+
+"""def get_NMNIST_dataset(path, limit=1000):
+    sensor_size = tonic.datasets.NMNIST.sensor_size
+    frame_transform = tonic.transforms.Compose(
+        [
+            tonic.transforms.Denoise(filter_time=10000),
+            tonic.transforms.ToFrame(sensor_size=sensor_size, time_window=1000),
+        ]
+    )
+    trainset_full = tonic.datasets.NMNIST(
+        save_to="./data", transform=frame_transform, train=True
+    )
+    testset_full = tonic.datasets.NMNIST(
+        save_to="./data", transform=frame_transform, train=False
+    )
+
+    # Restrict both to a smaller subset for quick testing
+    trainset, _ = random_split(
+        trainset_full,
+        [limit, len(trainset_full) - limit],
         generator=torch.Generator().manual_seed(42),
-    )[0]
-    testset = random_split(
-        testset,
-        [split, 1 - split],
+    )
+    testset, _ = random_split(
+        testset_full,
+        [limit, len(testset_full) - limit],
         generator=torch.Generator().manual_seed(42),
-    )[0]
+    )
+
     trainset = MemoryCachedDataset(
         trainset,
         transform=tonic.transforms.Compose(
@@ -66,11 +100,67 @@ def get_NMNIST_dataset(path):
         ),
     )
     testset = MemoryCachedDataset(testset)
-    return trainset, testset
+
+    return trainset, testset"""
+
+def get_dataset_targets(dataset):
+    """Retrieve labels from dataset even if it doesn't have a 'targets' attribute."""
+    try:
+        return dataset.targets  # Works for standard torch datasets
+    except AttributeError:
+        # Fallback: collect labels by indexing
+        return [dataset[i][1] for i in range(len(dataset))]
+
+def non_iid_partition(trainSet, num_clients, num_classes=10, samples_per_class=1000):
+    targets = np.array(trainSet.targets)
+    class_indices = {i: np.where(targets == i)[0] for i in range(num_classes)}
+
+    client_indices = [[] for _ in range(num_clients)]
+
+    for cls in range(num_classes):
+        indices = class_indices[cls]
+        np.random.shuffle(indices)
+        split = np.array_split(indices, num_clients)
+        for client_id in range(num_clients):
+            client_indices[client_id].extend(split[client_id])
+
+    client_datasets = [
+        torch.utils.data.Subset(trainSet, inds) for inds in client_indices
+    ]
+    return client_datasets
+
+def dirichlet_non_iid_partition(dataset, num_clients, num_classes=10, alpha=0.5, min_size=1):
+    targets = np.array(get_dataset_targets(dataset))
+    class_indices = [np.where(targets == y)[0] for y in range(num_classes)]
+
+    while True:
+        client_idx = [[] for _ in range(num_clients)]
+
+        for idx_y in class_indices:
+            if len(idx_y) == 0:
+                continue
+            np.random.shuffle(idx_y)
+            counts = np.random.multinomial(len(idx_y),
+                                           np.random.dirichlet([alpha]*num_clients))
+            start = 0
+            for cid, cnt in enumerate(counts):
+                client_idx[cid].extend(idx_y[start:start+cnt])
+                start += cnt
+
+        sizes = [len(idxs) for idxs in client_idx]
+        if min(sizes) >= min_size:
+            break  # ensure no partition is empty
+
+    return [torch.utils.data.Subset(dataset, ids) for ids in client_idx]
 
 
 def load_dataset(
-    name, path, num_partitions: int, batch_size: int, val_ratio: float = 0.1
+    name,
+    path,
+    num_partitions: int,
+    batch_size: int,
+    val_ratio: float = 0.1,
+    non_iid=True,
 ):
     """val_ratio is used to vary data amount among clients"""
     transform = transforms.ToTensor()
@@ -88,11 +178,14 @@ def load_dataset(
         raise ValueError(f"Unsupported dataset: {name}")
 
     # split trainset into partitioned trainsets - below has equal size partitions but can be changed
-    num_images = len(trainSet) // num_partitions
-    partition_length = [num_images] * num_partitions
-    trainsets = random_split(
-        trainSet, partition_length, torch.Generator().manual_seed(42)
-    )  # For repetition
+    if non_iid:
+        trainsets = dirichlet_non_iid_partition(trainSet, num_partitions)
+    else:
+        num_images = len(trainSet) // num_partitions
+        partition_length = [num_images] * num_partitions
+        trainsets = random_split(
+            trainSet, partition_length, torch.Generator().manual_seed(42)
+        )  # For repetition
 
     # partition into train and validation sets
     trainingList = []
@@ -101,11 +194,13 @@ def load_dataset(
         total = len(partition)
         validation_length = int(val_ratio * total)
         train_length = total - validation_length
+
         for_training, for_validation = random_split(
             partition,
             [train_length, validation_length],
             generator=torch.Generator().manual_seed(42),
         )
+
         trainingList.append(
             DataLoader(
                 for_training,

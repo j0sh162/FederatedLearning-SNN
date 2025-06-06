@@ -1,13 +1,14 @@
 
 #FL Settings
 fl:
-  num_rounds: 5
+  num_rounds: 10
   num_clients: 100
   batch_size: 20
-  differential_privacy: True
-  noise_multiplier: 1.0
-  clipping_norm: 0.1 # Recommendation by Flower
-  num_sampled_clients: 5
+  non_iid: True # Set to false for iid; Set to true for non-iid
+  differential_privacy: False
+  noise_multiplier: 0.05
+  clipping_norm: 0.3 # Recommendation by Flower
+  num_sampled_clients: 20
 
 
 #Client settings - what server tell each client to use in their local training
@@ -15,7 +16,7 @@ client:
   lr: 2e-2 # learning rate
   betas: [0.9, 0.999] # betas for Adam optimizer
   momentum: 0.9
-  local_epochs: 3
+  local_epochs: 1
   num_classes: 10 # (N)MNIST data has 10 classes
   num_clients_per_round_fit: 5
   num_clients_per_round_evaluate: 10 #After each round if we have 100 clients 1/4 will be used to evaluate what's characteristic of the global model
@@ -43,9 +44,9 @@ datasets:
     input_size: 34
     channels: 2
     num_classes: 10
-    batch_size: 50 # for testing
+    batch_size: 50 # was 50 # for testing
 
 defaults: #Here we define which model and strategy we wish to use,
-  - strategy: fedadam #create a config in conf/strategy and define the strategy parameters
-  - model: EVENTPROP #create a model yaml in conf/model and define the input parameters for that model
+  - strategy: fedavg #create a config in conf/strategy and define the strategy parameters
+  - model: SNN #create a model yaml in conf/model and define the input parameters for that model
 

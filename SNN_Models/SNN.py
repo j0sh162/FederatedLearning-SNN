@@ -21,7 +21,7 @@ class Net(nn.Module):
         input_shape: tuple = (2, 34, 34),
         num_hidden: int = 1,
         num_output: int = 10,
-        spike_grad=surrogate.atan(),
+        spike_grad=surrogate.SparseFastSigmoid(),
         beta: float = 0.5,
     ):
         super().__init__()

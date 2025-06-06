@@ -1,8 +1,11 @@
 """Local server that trains the model among all clients"""
 
+import logging
 from collections import OrderedDict
+from typing import List, Tuple
 
 import torch
+from flwr.common import Metrics
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ray import client
@@ -10,6 +13,8 @@ from ray import client
 from FL.CNN import Net
 from FL.training_utils import test
 from SNN_Models import SNN_utils
+
+logger = logging.getLogger("rich")
 
 
 def get_on_fit_config(config: DictConfig):
@@ -25,14 +30,20 @@ def get_on_fit_config(config: DictConfig):
 
     return fit_config_function
 
-#TODO Make this general so then it nice easy and switch 
+
+# TODO Make this general so then it nice easy and switch
 def get_evaluate_fn(model_cfg, testLoader):
     def evaluate_fn(server_round: int, parameters, config):
         model = instantiate(model_cfg)
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = (
+            torch.device("cuda")
+            if torch.cuda.is_available()
+            else torch.device("mps")
+            if torch.backends.mps.is_available()
+            else torch.device("cpu")
+        )
         # device = torch.device("cpu")
         # dictionary = model.state_dict()
-        print("client", server_round)
         # print("length before: ", len(dictionary))
         # for k,v in dictionary.items():
         #    print(f"{k}: {v}")
@@ -47,8 +58,13 @@ def get_evaluate_fn(model_cfg, testLoader):
 
         model.load_state_dict(state_dict, strict=True)
         # print("parameters in server: ", parameters, "client", server_round)
-        # TODO Adjust for use with different models
-        loss, accuracy = SNN_utils.test(model, testLoader, device)
+
+        if model_cfg._target_ == "SNN_Models.SNN.Net":
+            loss, accuracy = SNN_utils.test(model, testLoader, device)
+        elif model_cfg._target_ == "FL.CNN.Net":
+            loss, accuracy = test(model, testLoader, device)
+        else:
+            raise ValueError(f"Unsupported model configuration: {model_cfg}")
         return loss, {"accuracy": accuracy}
 
     return evaluate_fn
