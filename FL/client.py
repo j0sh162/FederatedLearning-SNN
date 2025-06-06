@@ -7,7 +7,7 @@ from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
 from rich.logging import RichHandler
 
-# from FL.training_utils import test, train
+from FL.training_utils import test, train
 from SNN_Models import EventProp,Spide
 from SNN_Models import SNN_utils
 
@@ -23,8 +23,6 @@ class FlowerClient(fl.client.NumPyClient):
         self.device = (
             torch.device("cuda")
             if torch.cuda.is_available()
-            else torch.device("mps")
-            if torch.backends.mps.is_available()
             else torch.device("cpu")
         )
 
@@ -60,11 +58,11 @@ class FlowerClient(fl.client.NumPyClient):
             )
         elif self.model_cfg._target_ == "SNN_Models.EventProp.SNN":
             EventProp.train(
-                self.model, optim, self.trainloader
+                self.model, optim, self.trainloader,config["local_epochs"],self.device
             )
         elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
             Spide.train_fl(
-                self.model, self.trainloader,self.device, config["local_epochs"],config
+                self.model, self.trainloader,self.device, config["local_epochs"],optim
             )
         # elif self.model_cfg._target_ == "FL.CNN.Net":
         #     train(
@@ -77,6 +75,10 @@ class FlowerClient(fl.client.NumPyClient):
         self.set_params(parameters)
         if self.model_cfg._target_ == "SNN_Models.SNN.Net":
             loss, accuracy = SNN_utils.test(self.model, self.valloader, self.device)
+        elif self.model_cfg._target_ == "SNN_Models.EventProp.SNN":
+            loss,accuracy = EventProp.test(self.model,self.valloader,self.device)
+        elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
+            loss,accuracy = Spide.test_fl(self.model,self.valloader,self.device)
         elif self.model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}

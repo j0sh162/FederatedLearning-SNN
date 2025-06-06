@@ -133,26 +133,11 @@ def train_fl(
     trainloader,
     device,
     epochs,
-    args_dict,
+    optimizer,
 ):
     model.train()
     criterion = nn.CrossEntropyLoss()
-    if args_dict["optimizer"].lower() == "sgd":
-        optimizer = optim.SGD(
-            model.parameters(),
-            lr=args_dict["lr"] / args_dict["scale_factor"],
-            momentum=args_dict["momentum"],
-            weight_decay=args_dict["weight_decay"],
-        )
-    elif args_dict["optimizer"].lower() == "adam":
-        optimizer = optim.Adam(
-            model.parameters(),
-            lr=args_dict["lr"] / args_dict["scale_factor"],
-            weight_decay=args_dict["weight_decay"],
-            # betas=(0.9, 0.999), # Default Adam betas
-        )
-    else:
-        raise ValueError(f"Unsupported optimizer: {args_dict['optimizer']}")
+
 
     epoch_losses = []
     epoch_accs = []
@@ -181,7 +166,7 @@ def train_fl(
             losses.update(loss.item(), inputs.size(1) if inputs.ndim > 1 else inputs.size(0)) # inputs.size(1) is batch size if T,B,C,H,W
             top1.update(prec1.item(), inputs.size(1) if inputs.ndim > 1 else inputs.size(0))
 
-            scaled_loss = loss * args_dict["scale_factor"]
+            scaled_loss = loss * 100.0
             optimizer.zero_grad()
             scaled_loss.backward()
             optimizer.step()
@@ -190,6 +175,7 @@ def train_fl(
         epoch_accs.append(top1.avg)
     return np.mean(epoch_losses), np.mean(epoch_accs)
 
+# TODO Update Spides forward for NMNIST
 
 # Modified test function for Flower client and server-side evaluation
 # def test_fl(model, testloader, device, args_dict):
@@ -209,7 +195,7 @@ def train_fl(
 #             top1.update(prec1.item(), inputs.size(0))
 #     return losses.avg, top1.avg
 
-def test_fl(model, testloader, device, args_dict): # args_dict might not be needed if model config is fixed
+def test_fl(model, testloader, device): # args_dict might not be needed if model config is fixed
     model.eval()
     criterion = nn.CrossEntropyLoss()
     losses = AverageMeter()

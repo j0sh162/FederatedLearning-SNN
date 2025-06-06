@@ -133,7 +133,7 @@ class SpikeCELoss(nn.Module):
         loss = self.celoss(-input / (self.xi * self.tau_s), target)
         return loss
 
-def train(model, optimizer, loader):
+def train(model, optimizer, loader,epochs,device):
     total_correct = 0.
     total_loss = 0.
     total_samples = 0.
@@ -149,35 +149,38 @@ def train(model, optimizer, loader):
     total_correct = 0.
     total_loss = 0.
     total_samples = 0.
-    for batch_idx, (input, target) in enumerate(iter(loader)):
-        input, target = input.to(device), target.to(device)
-        input = input.view(input.shape[0], -1, T)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    for epoch in range(epochs):
+        for batch_idx, (input, target) in enumerate(iter(loader)):
+            input, target = input.to(device), target.to(device)
+            input = input.view(input.shape[0], -1, T)
 
-        output = model(input)
+            output = model(input)
 
-        loss = criterion(output, target)
+            loss = criterion(output, target)
 
-        if alpha != 0:
-            target_first_spike_times = output.gather(1, target.view(-1, 1))
-            loss += alpha * (torch.exp(target_first_spike_times / (beta * tau_s)) - 1).mean()
+            if alpha != 0:
+                target_first_spike_times = output.gather(1, target.view(-1, 1))
+                loss += alpha * (torch.exp(target_first_spike_times / (beta * tau_s)) - 1).mean()
 
-        predictions = output.data.min(1, keepdim=True)[1]
-        total_correct += predictions.eq(target.data.view_as(predictions)).sum().item()
-        total_loss += loss.item() * len(target)
-        total_samples += len(target)
+            predictions = output.data.min(1, keepdim=True)[1]
+            total_correct += predictions.eq(target.data.view_as(predictions)).sum().item()
+            total_loss += loss.item() * len(target)
+            total_samples += len(target)
 
-        optimizer.zero_grad()
-        loss.backward()
+            optimizer.zero_grad()
+            loss.backward()
 
-        optimizer.step()
+            optimizer.step()
 
-        # print updates every 10 batches
-        if batch_idx % 10 == 0:
-            print('\tBatch {:03d}/{:03d}: \tAcc {:.2f}  Loss {:.3f}'.format(
-                batch_idx, len(loader), 100*total_correct/total_samples, total_loss/total_samples
-            ))
+            # print updates every 10 batches
+            if batch_idx % 10 == 0:
+                print('\tBatch {:03d}/{:03d}: \tAcc {:.2f}  Loss {:.3f}'.format(
+                    batch_idx, len(loader), 100*total_correct/total_samples, total_loss/total_samples
+                ))
 
-    print('\t\tTrain: \tAcc {:.2f}  Loss {:.3f}'.format(100*total_correct/total_samples, total_loss/total_samples))
+        print('\t\tTrain: \tAcc {:.2f}  Loss {:.3f}'.format(100*total_correct/total_samples, total_loss/total_samples))
+        scheduler.step()
     return total_loss/total_samples,100*total_correct/total_samples
 
 def test(model, loader, device):
@@ -200,9 +203,9 @@ def test(model, loader, device):
             first_post_spikes = model(spike_data)
             loss = criterion(first_post_spikes, target)
             
-            if alpha != 0:
-                target_first_spike_times = spike_data.gather(1, target.view(-1, 1))
-                loss += alpha * (torch.exp(target_first_spike_times / (beta * tau_s)) - 1).mean()
+            # if alpha != 0:
+            #     target_first_spike_times = spike_data.gather(1, target.view(-1, 1))
+            #     loss += alpha * (torch.exp(target_first_spike_times / (beta * tau_s)) - 1).mean()
                 
             predictions = first_post_spikes.data.min(1, keepdim=True)[1]
             total_correct += predictions.eq(target.data.view_as(predictions)).sum().item()
@@ -263,13 +266,13 @@ if __name__ == "__main__":
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
     # 2 (C) * 34 (W) * 34 (H) = 2312 input neurons
-    model = SNN(2312, 10, args.T, args.dt, args.tau_m, args.tau_s).to(device)
-    criterion = SpikeCELoss(args.T, args.xi, args.tau_s)
+    model = SNN(2312, 10, args.T, args.dt, args.tau_m, args.tau_s,args.xi,0.01,2).to(device)
+    # criterion = SpikeCELoss(args.T, args.xi, args.tau_s)
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     for epoch in range(args.epochs):
         print('Epoch {:03d}/{:03d}'.format(epoch, args.epochs))
-        train(model, criterion, optimizer, train_loader, args.alpha, args.beta, args.tau_s, args.T)
-        test(model, test_loader, args.T)
+        train(model, optimizer, train_loader, 1,device)
+        test(model, test_loader, device)
         scheduler.step()

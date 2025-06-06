@@ -162,7 +162,7 @@ def load_dataset(
         trainSet, testSet = get_CIFARdataset(path)
         collate_fn = None
     elif name == "NMNIST":
-        trainSet, testSet = get_NMIST_T_BIN_dataset(20)
+        trainSet, testSet = get_NMNIST_dataset(path)
         collate_fn = tonic.collation.PadTensors(batch_first=False)
     else:
         raise ValueError(f"Unsupported dataset: {name}")
