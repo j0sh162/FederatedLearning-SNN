@@ -27,7 +27,7 @@ class WrapperFunction(Function):
 class FirstSpikeTime(Function):
     @staticmethod
     def forward(ctx, input):   
-        idx = torch.arange(input.shape[2], 0, -1).unsqueeze(0).unsqueeze(0).float().cuda()
+        idx = torch.arange(input.shape[2], 0, -1).unsqueeze(0).unsqueeze(0).float()
         first_spike_times = torch.argmax(idx*input, dim=2).float()
         ctx.save_for_backward(input, first_spike_times.clone())
         first_spike_times[first_spike_times==0] = input.shape[2]-1
@@ -58,9 +58,9 @@ class SpikingLinear(nn.Module):
     def manual_forward(self, input):
         steps = int(self.T / self.dt)
 
-        V = torch.zeros(input.shape[0], self.output_dim, steps).cuda()
-        I = torch.zeros(input.shape[0], self.output_dim, steps).cuda()
-        output = torch.zeros(input.shape[0], self.output_dim, steps).cuda()
+        V = torch.zeros(input.shape[0], self.output_dim, steps)
+        I = torch.zeros(input.shape[0], self.output_dim, steps)
+        output = torch.zeros(input.shape[0], self.output_dim, steps)
 
         while True:
             for i in range(1, steps):
@@ -84,11 +84,11 @@ class SpikingLinear(nn.Module):
     def manual_backward(self, grad_output, input, I, post_spikes):
         steps = int(self.T / self.dt)
 
-        lV = torch.zeros(input.shape[0], self.output_dim, steps).cuda()
-        lI = torch.zeros(input.shape[0], self.output_dim, steps).cuda()
+        lV = torch.zeros(input.shape[0], self.output_dim, steps)
+        lI = torch.zeros(input.shape[0], self.output_dim, steps)
 
-        grad_input = torch.zeros(input.shape[0], input.shape[1], steps).cuda()
-        grad_weight = torch.zeros(input.shape[0], *self.weight.shape).cuda()
+        grad_input = torch.zeros(input.shape[0], input.shape[1], steps)
+        grad_weight = torch.zeros(input.shape[0], *self.weight.shape)
 
         for i in range(steps-2, -1, -1):
             t = i * self.dt
@@ -103,17 +103,26 @@ class SpikingLinear(nn.Module):
         return grad_input, grad_weight
 
 class SNN(nn.Module):
-    def __init__(self, input_dim, output_dim, T, dt, tau_m, tau_s):
+    def __init__(self, input_dim, output_dim, T, dt, tau_m, tau_s,xi,alpha,beta):
         super(SNN, self).__init__()
         self.slinear1 = SpikingLinear(input_dim, output_dim, T, dt, tau_m, tau_s, 0.1)
+        # self.slinear2 = SpikingLinear(100, output_dim, T, dt, tau_m, tau_s, 0.1)
         self.outact = FirstSpikeTime.apply
+        self.T = T
+        self.alpha = alpha
+        self.beta = beta
+        self.tau_s = tau_s
+        self.criterion = SpikeCELoss(T,xi,tau_s)
+        
 
     def forward(self, input):
         u = self.slinear1(input)
+        # u = self.slinear2(u)
         u = self.outact(u)
         return u
 
 class SpikeCELoss(nn.Module):
+    # TODO change to also return accuarcy 
     def __init__(self, T, xi, tau_s):
         super(SpikeCELoss, self).__init__()
         self.xi = xi
@@ -124,19 +133,25 @@ class SpikeCELoss(nn.Module):
         loss = self.celoss(-input / (self.xi * self.tau_s), target)
         return loss
 
-def train(model, criterion, optimizer, loader, alpha, beta, tau_s, T):
+def train(model, optimizer, loader):
     total_correct = 0.
     total_loss = 0.
     total_samples = 0.
     model.train()
+    alpha = model.alpha
+    beta = model.beta
+    tau_s = model.tau_s
+    T = model.T
+    criterion = model.criterion
+    # TODO add epochs 
 
+
+    total_correct = 0.
+    total_loss = 0.
+    total_samples = 0.
     for batch_idx, (input, target) in enumerate(iter(loader)):
         input, target = input.to(device), target.to(device)
         input = input.view(input.shape[0], -1, T)
-
-        total_correct = 0.
-        total_loss = 0.
-        total_samples = 0.
 
         output = model(input)
 
@@ -163,27 +178,42 @@ def train(model, criterion, optimizer, loader, alpha, beta, tau_s, T):
             ))
 
     print('\t\tTrain: \tAcc {:.2f}  Loss {:.3f}'.format(100*total_correct/total_samples, total_loss/total_samples))
+    return total_loss/total_samples,100*total_correct/total_samples
 
-def test(model, loader, T):
+def test(model, loader, device):
     total_correct = 0.
     total_samples = 0.
+    total_loss = 0.
     model.eval()
 
+    alpha = model.alpha
+    beta = model.beta
+    tau_s = model.tau_s
+    T = model.T
+    criterion = model.criterion
+    
     with torch.no_grad():
         for batch_idx, (data, target) in enumerate(loader):
             data, target = data.to(device), target.to(device)
-            spike_data = spike_data.view(spike_data.shape[0], -1, T)
-
+            spike_data = data.view(data.shape[0], -1, T)
             first_post_spikes = model(spike_data)
+            loss = criterion(first_post_spikes, target)
+            
+            if alpha != 0:
+                target_first_spike_times = spike_data.gather(1, target.view(-1, 1))
+                loss += alpha * (torch.exp(target_first_spike_times / (beta * tau_s)) - 1).mean()
+                
             predictions = first_post_spikes.data.min(1, keepdim=True)[1]
             total_correct += predictions.eq(target.data.view_as(predictions)).sum().item()
             total_samples += len(target)
+            total_loss += loss.item() * len(target)
 
             # print updates every 10 batches
             if batch_idx % 10 == 0:
                 print('\tBatch {:03d}/{:03d}: \tAcc {:.2f}'.format(batch_idx, len(loader), 100*total_correct/total_samples))
 
         print('\t\tTest: \tAcc {:.2f}'.format(100*total_correct/total_samples))
+    return total_loss/total_samples,100*total_correct/total_samples
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -209,7 +239,7 @@ if __name__ == "__main__":
     parser.add_argument('--tau_m', type=float, default=20.0, help='membrane time constant, in ms (default: 20)')
     parser.add_argument('--tau_s', type=float, default=5.0, help='synaptic time constant, in ms (default: 5)')
 
-    args = parser.parse_args()
+    args = parser.parse_args() 
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)

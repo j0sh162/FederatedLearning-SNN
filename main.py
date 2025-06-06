@@ -21,6 +21,8 @@ from Training import dataset
 def main(cfg: DictConfig):
     # 1. Parse config and get experiment output dir
     print(OmegaConf.to_yaml(cfg))
+    model = cfg.model
+    model = instantiate(model)
 
     # 2. Prepare dataset
     dataset_name = cfg.dataset.name

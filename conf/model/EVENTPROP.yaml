@@ -1,0 +1,15 @@
+---
+_target_: SNN_Models.EventProp.SNN # Class to instantiate
+
+# This 'cfg' key directly maps to the 'cfg' argument in your model's __init__
+
+  # This 'MODEL' key matches the structure expected by your parse_cfg method
+input_dim: 2312
+output_dim: 10
+T: 20
+dt: 1
+tau_m: 20.0
+tau_s: 5.0
+xi: 0.4
+alpha: 0.01
+beta: 2
