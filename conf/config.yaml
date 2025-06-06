@@ -44,9 +44,9 @@ datasets:
     input_size: 34
     channels: 2
     num_classes: 10
-    batch_size: 20 # was 50 # for testing
+    batch_size: 128 # was 50 # for testing
 
 defaults: #Here we define which model and strategy we wish to use,
   - strategy: fedavg #create a config in conf/strategy and define the strategy parameters
-  - model: EVENTPROP #create a model yaml in conf/model and define the input parameters for that model
+  - model: SNN #create a model yaml in conf/model and define the input parameters for that model
 

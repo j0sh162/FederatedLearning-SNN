@@ -22,6 +22,7 @@ dependencies = [
     "snntorch",
     "rich",
     "matplotlib",
+    "progress",
 ]
 
 [tool.setuptools]
