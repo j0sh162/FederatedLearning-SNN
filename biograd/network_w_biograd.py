@@ -72,13 +72,14 @@ class BioGradNetworkWithSleep(nn.Module):
             feedback_step: number of steps for feedback simulation
 
         """
-        print("before: ", spike_data.shape)
+        # print("before: ", spike_data.shape)
+        spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
         spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
         batch_size = spike_data.shape[0]
         spike_ts = spike_data.shape[-1]
         if len(spike_data.shape) > 3:
             spike_data = spike_data.view(batch_size, self.input_dim, spike_ts)
-        print("after: ", spike_data.shape)
+        # print("after: ", spike_data.shape)
 
         # Init Hidden Layer Cell States
         hidden_forward_states, hidden_feedback_states = [], []
@@ -221,13 +222,14 @@ class BioGradNetworkWithSleep(nn.Module):
             predict_label: predict labels
 
         """
-        print("before: ", spike_data.shape)
+        # print("before: ", spike_data.shape)
+        spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
         spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
         batch_size = spike_data.shape[0]
         spike_ts = spike_data.shape[-1]
         if len(spike_data.shape) > 3:
             spike_data = spike_data.view(batch_size, self.input_dim, spike_ts)
-        print("after: ", spike_data.shape)
+        # print("after: ", spike_data.shape)
 
         # Init Hidden Layer Cell States
         hidden_forward_states = []
