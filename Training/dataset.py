@@ -25,16 +25,6 @@ def get_CIFARdataset(path):
     return train, test
 
 
-def get_NMIST_T_BIN_dataset(T):
-    transform = tonic.transforms.Compose(
-        [
-            tonic.transforms.Denoise(filter_time=10000),
-            tonic.transforms.ToFrame(sensor_size=tonic.datasets.NMNIST.sensor_size, n_time_bins=T),
-        ]
-    )
-    train_dataset = tonic.datasets.NMNIST(save_to="./data", train=True, transform=transform)
-    test_dataset = tonic.datasets.NMNIST(save_to="./data", train=False, transform=transform)
-    return train_dataset,test_dataset
 
 
     
