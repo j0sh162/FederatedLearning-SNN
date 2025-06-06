@@ -13,6 +13,7 @@ from ray import client
 from FL.CNN import Net
 from FL.training_utils import test
 from SNN_Models import SNN_utils
+from SNN_Models import EventProp,Spide
 
 logger = logging.getLogger("rich")
 
@@ -38,8 +39,6 @@ def get_evaluate_fn(model_cfg, testLoader):
         device = (
             torch.device("cuda")
             if torch.cuda.is_available()
-            else torch.device("mps")
-            if torch.backends.mps.is_available()
             else torch.device("cpu")
         )
         # device = torch.device("cpu")
@@ -61,6 +60,10 @@ def get_evaluate_fn(model_cfg, testLoader):
 
         if model_cfg._target_ == "SNN_Models.SNN.Net":
             loss, accuracy = SNN_utils.test(model, testLoader, device)
+        elif model_cfg._target_ == "SNN_Models.EventProp.SNN":
+            loss,accuracy = EventProp.test(model,testLoader,device)
+        elif model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
+            loss,accuracy = Spide.test_fl(model,testLoader,device)
         elif model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(model, testLoader, device)
         else:
