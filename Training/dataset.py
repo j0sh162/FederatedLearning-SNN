@@ -31,13 +31,11 @@ def get_NMNIST_dataset(path):
             tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
         ]
     )
-    trainset = tonic.datasets.NMNIST(
-        save_to="./data",
-        transform=tonic.transforms.Compose(
-            [frame_transform, torch.from_numpy, RandomRotation([-10, 10])]
-        ),
-        train=True,
+
+    train_dataset = tonic.datasets.NMNIST(
+        save_to="./data", train=True, transform=frame_transform
     )
+
     testset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=False
     )
@@ -48,7 +46,7 @@ def get_NMNIST_dataset(path):
     #     ),
     # )
     # testset = MemoryCachedDataset(testset)
-    return trainset, testset
+    return train_dataset, testset
 
 
 """def get_NMNIST_dataset(path, limit=1000):

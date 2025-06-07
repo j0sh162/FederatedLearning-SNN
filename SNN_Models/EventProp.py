@@ -153,7 +153,11 @@ def train(model, optimizer, loader,epochs,device):
     for epoch in range(epochs):
         for batch_idx, (input, target) in enumerate(iter(loader)):
             input, target = input.to(device), target.to(device)
-            input = input.view(input.shape[0], -1, T)
+            index = 0
+            if input.shape[0] == T:
+                index = 1
+                
+            input = input.view(input.shape[index], -1, T)
 
             output = model(input)
 
@@ -198,7 +202,11 @@ def test(model, loader, device):
     with torch.no_grad():
         for batch_idx, (data, target) in enumerate(loader):
             data, target = data.to(device), target.to(device)
-            spike_data = data.view(data.shape[0], -1, T)
+            index = 0
+            if data.shape[0] == T:
+                index = 1
+                
+            spike_data = data.view(data.shape[index], -1, T)
 
             first_post_spikes = model(spike_data)
             loss = criterion(first_post_spikes, target)
@@ -269,10 +277,10 @@ if __name__ == "__main__":
     model = SNN(2312, 10, args.T, args.dt, args.tau_m, args.tau_s,args.xi,0.01,2).to(device)
     # criterion = SpikeCELoss(args.T, args.xi, args.tau_s)
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     for epoch in range(args.epochs):
         print('Epoch {:03d}/{:03d}'.format(epoch, args.epochs))
         train(model, optimizer, train_loader, 1,device)
         test(model, test_loader, device)
-        scheduler.step()
+        # scheduler.step()
