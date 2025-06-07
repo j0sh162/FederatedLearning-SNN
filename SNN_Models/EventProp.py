@@ -27,7 +27,7 @@ class WrapperFunction(Function):
 class FirstSpikeTime(Function):
     @staticmethod
     def forward(ctx, input):   
-        idx = torch.arange(input.shape[2], 0, -1).unsqueeze(0).unsqueeze(0).float()
+        idx = torch.arange(input.shape[2], 0, -1).unsqueeze(0).unsqueeze(0).float().to(device)
         first_spike_times = torch.argmax(idx*input, dim=2).float()
         ctx.save_for_backward(input, first_spike_times.clone())
         first_spike_times[first_spike_times==0] = input.shape[2]-1
@@ -58,9 +58,9 @@ class SpikingLinear(nn.Module):
     def manual_forward(self, input):
         steps = int(self.T / self.dt)
 
-        V = torch.zeros(input.shape[0], self.output_dim, steps)
-        I = torch.zeros(input.shape[0], self.output_dim, steps)
-        output = torch.zeros(input.shape[0], self.output_dim, steps)
+        V = torch.zeros(input.shape[0], self.output_dim, steps).to(device)
+        I = torch.zeros(input.shape[0], self.output_dim, steps).to(device)
+        output = torch.zeros(input.shape[0], self.output_dim, steps).to(device)
 
         while True:
             for i in range(1, steps):
@@ -84,11 +84,11 @@ class SpikingLinear(nn.Module):
     def manual_backward(self, grad_output, input, I, post_spikes):
         steps = int(self.T / self.dt)
 
-        lV = torch.zeros(input.shape[0], self.output_dim, steps)
-        lI = torch.zeros(input.shape[0], self.output_dim, steps)
+        lV = torch.zeros(input.shape[0], self.output_dim, steps).to(device)
+        lI = torch.zeros(input.shape[0], self.output_dim, steps).to(device)
 
-        grad_input = torch.zeros(input.shape[0], input.shape[1], steps)
-        grad_weight = torch.zeros(input.shape[0], *self.weight.shape)
+        grad_input = torch.zeros(input.shape[0], input.shape[1], steps).to(device)
+        grad_weight = torch.zeros(input.shape[0], *self.weight.shape).to(device)
 
         for i in range(steps-2, -1, -1):
             t = i * self.dt
@@ -137,20 +137,20 @@ def train(model, optimizer, loader,epochs,device):
     total_correct = 0.
     total_loss = 0.
     total_samples = 0.
-    model.train()
-    alpha = model.alpha
-    beta = model.beta
-    tau_s = model.tau_s
-    T = model.T
-    criterion = model.criterion
-    # TODO add epochs 
-
-
     total_correct = 0.
     total_loss = 0.
     total_samples = 0.
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     for epoch in range(epochs):
+        model.train()
+        alpha = model.alpha
+        beta = model.beta
+        tau_s = model.tau_s
+        T = model.T
+        criterion = model.criterion
+    # TODO add epochs 
+
+
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
         for batch_idx, (input, target) in enumerate(iter(loader)):
             input, target = input.to(device), target.to(device)
             index = 0
@@ -279,8 +279,8 @@ if __name__ == "__main__":
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
-    for epoch in range(args.epochs):
-        print('Epoch {:03d}/{:03d}'.format(epoch, args.epochs))
-        train(model, optimizer, train_loader, 1,device)
-        test(model, test_loader, device)
+    # for epoch in range(args.epochs):
+    # print('Epoch {:03d}/{:03d}'.format(1, args.epochs))
+    train(model, optimizer, train_loader, 10,device)
+    test(model, test_loader, device)
         # scheduler.step()

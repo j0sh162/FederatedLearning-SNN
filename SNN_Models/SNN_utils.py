@@ -25,11 +25,11 @@ def train(net, train_loader, optimizer, epochs, device: str):
                 optimizer.step()
 
                 acc = SF.accuracy_rate(spk_rec, targets)
-                # print(
-                #     "Epoch {:02d} | Batch {:03d}/{:03d} | Loss {:05.2f} | Accuracy {:05.2f}%".format(
-                #         epoch, batch_number, num_batches, loss_val.item(), acc * 100
-                #     ),
-                # )
+                print(
+                    "Epoch {:02d} | Batch {:03d}/{:03d} | Loss {:05.2f} | Accuracy {:05.2f}%".format(
+                        epoch, batch_number, num_batches, loss_val.item(), acc * 100
+                    ),
+                )
             except Exception as e:
                 print("Error in training loop:", e)
                 break
@@ -41,7 +41,6 @@ def test(net, testloader, device: str):
     net.eval()
     net.to(device)
     with torch.no_grad():
-        i = 0
         for data in testloader:
             images, labels = data[0].to(device), data[1].to(device)
             spk_rec = net(images)
@@ -49,10 +48,6 @@ def test(net, testloader, device: str):
             acc = SF.accuracy_rate(spk_rec, labels)
             loss_hist.append(loss.item())
             acc_hist.append(acc.item())
-
-            i += 1
-            if i > 10:  # Stop after 10 batches
-                break
 
     if len(loss_hist) == 0:
         return 0.0, 0.0
