@@ -2,18 +2,21 @@
 
 import logging
 from collections import OrderedDict
+from pathlib import Path
 from typing import List, Tuple
 
 import torch
 from flwr.common import Metrics
+from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ray import client
-from torch.utils.tensorboard import SummaryWriter
 
 from FL.CNN import Net
 from FL.training_utils import test
 from SNN_Models import EventProp, SNN_utils, Spide
+
+# from torch.utils.tensorboard import SummaryWriter
 
 logger = logging.getLogger("flwr")
 # global_server_round = 0
@@ -84,12 +87,12 @@ def get_on_fit_config(config: DictConfig):
 
 
 # TODO Make this general so then it nice easy and switch
-def get_evaluate_fn(model_cfg, testLoader):
+def get_evaluate_fn(cfg, testLoader):
     # seed = torch.initial_seed()
     # writer = SummaryWriter(log_dir=f"runs/federated_server/{seed}")
 
     def evaluate_fn(server_round: int, parameters, config):
-        model = instantiate(model_cfg)
+        model = instantiate(cfg.model)
         device = (
             torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
@@ -106,20 +109,24 @@ def get_evaluate_fn(model_cfg, testLoader):
         # print("length: ",len(state_dict))
         # for k,v in state_dict.items():
         # print("k: ", k," v: ",v)
-
         model.load_state_dict(state_dict, strict=True)
+
+        # Save model every evaluation round
+        save_path = HydraConfig.get().runtime.output_dir
+        model_path = Path(save_path) / "state_dict.pth"
+        torch.save(model.state_dict(), model_path)
         # print("parameters in server: ", parameters, "client", server_round)
 
-        if model_cfg._target_ == "SNN_Models.SNN.Net":
+        if cfg.model._target_ == "SNN_Models.SNN.Net":
             loss, accuracy = SNN_utils.test(model, testLoader, device)
-        elif model_cfg._target_ == "SNN_Models.EventProp.SNN":
+        elif cfg.model._target_ == "SNN_Models.EventProp.SNN":
             loss, accuracy = EventProp.test(model, testLoader, device)
-        elif model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
+        elif cfg.model._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
             loss, accuracy = Spide.test_fl(model, testLoader, device)
-        elif model_cfg._target_ == "FL.CNN.Net":
+        elif cfg.model._target_ == "FL.CNN.Net":
             loss, accuracy = test(model, testLoader, device)
         else:
-            raise ValueError(f"Unsupported model configuration: {model_cfg}")
+            raise ValueError(f"Unsupported model configuration: {cfg.model}")
 
         # writer.add_scalar("server/test/loss", loss, server_round)
         # writer.add_scalar("server/test/accuracy", accuracy, server_round)

@@ -73,7 +73,7 @@ def main(cfg: DictConfig):
                                           on_fit_config_fn=get_on_fit_config(cfg.client),
                                           evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader))"""  # At the end of aggregation we obtain new global model and evaluate it
     base_strategy = instantiate(
-        cfg.strategy, evaluate_fn=get_evaluate_fn(cfg.model, testLoader)
+        cfg.strategy, evaluate_fn=get_evaluate_fn(cfg, testLoader)
     )
 
     # Server-side central differential privacy
