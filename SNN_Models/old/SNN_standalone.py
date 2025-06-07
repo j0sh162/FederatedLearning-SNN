@@ -1,8 +1,11 @@
 # Based on: https://ieeexplore.ieee.org/abstract/document/10242251
 # Adapted from: https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_7.html
+import argparse
 import os
+import random
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import tonic
@@ -19,7 +22,19 @@ from torch.utils.tensorboard import SummaryWriter
 from SNN_Models import SNN
 from SNN_Models.SNN_utils import test
 
-writer = SummaryWriter(f"runs/SurrogateGradient_centralized/seed_{0}")
+parser = argparse.ArgumentParser()
+parser.add_argument("--seed", type=int, default=0)
+parser.add_argument("--batchsize", type=int, default=128)
+parser.add_argument("--epochs", type=int, default=1)
+parser.add_argument("--num_iters", type=int, default=-1)
+args = parser.parse_args()
+print(args)
+
+torch.manual_seed(args.seed)
+random.seed(args.seed)
+np.random.seed(args.seed)
+
+writer = SummaryWriter(f"runs/SurrogateGradient_centralized/{args.seed}")
 
 sensor_size = tonic.datasets.NMNIST.sensor_size
 
@@ -48,7 +63,7 @@ cached_trainset = MemoryCachedDataset(trainset, transform=transform)
 # no augmentations for the testset
 cached_testset = MemoryCachedDataset(testset)
 
-batch_size = 128
+batch_size = args.batchsize
 train_loader = DataLoader(
     cached_trainset,
     batch_size=batch_size,
@@ -87,8 +102,8 @@ if False:  # os.path.exists("snn_net.pt"):
 optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
 
-num_epochs = 1
-num_iters = 30
+num_epochs = args.epochs
+num_iters = args.num_iters
 num_batches = len(train_loader)
 
 hist = []
@@ -140,12 +155,12 @@ writer.flush()
 writer.close()
 torch.save(snn_net.net.state_dict(), "snn_net.pt")
 
-fig = plt.figure(facecolor="w")
-df = pd.DataFrame(hist, columns=["epoch", "batch", "Loss", "Acc", "Set"])
-df.to_csv("acc_hist.csv", index=False)
-df["epoch_batch"] = df["epoch"].astype(str) + "-" + df["batch"].astype(str)
-sns.lineplot(data=df, x="epoch_batch", y="Acc", hue="Set")
-plt.title("Train/ Test Set Accuracy")
-plt.xlabel("Epoch-Batch")
-plt.ylabel("Accuracy")
-plt.show()
+# fig = plt.figure(facecolor="w")
+# df = pd.DataFrame(hist, columns=["epoch", "batch", "Loss", "Acc", "Set"])
+# df.to_csv("acc_hist.csv", index=False)
+# df["epoch_batch"] = df["epoch"].astype(str) + "-" + df["batch"].astype(str)
+# sns.lineplot(data=df, x="epoch_batch", y="Acc", hue="Set")
+# plt.title("Train/ Test Set Accuracy")
+# plt.xlabel("Epoch-Batch")
+# plt.ylabel("Accuracy")
+# plt.show()
