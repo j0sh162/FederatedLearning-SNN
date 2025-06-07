@@ -48,19 +48,19 @@ def main(cfg: DictConfig):
     dataset_name = cfg.dataset.name
     dataset_path = cfg.datasets[dataset_name].path
     print(f"IID: {cfg.fl.non_iid}")
-    trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
+    trainLoaders, testLoader = dataset.load_dataset(
         cfg,
         dataset_name,
         dataset_path,
         cfg.fl.num_clients,
         cfg.datasets[dataset_name].batch_size,  # was originally cfg.fl.batch_size
-        0.1,
+        seed,
         cfg.fl.non_iid,
     )
     print(len(trainLoaders), len(trainLoaders[0].dataset))
 
     # 3. Define clients - allows to initialize clients
-    client_fn = generate_client_fn(trainLoaders, validationLoaders, cfg.model, seed)
+    client_fn = generate_client_fn(trainLoaders, testLoader, cfg.model, seed)
     print(
         "cfg num_rounds: ", cfg.fl.num_rounds, "cfg num classes", cfg.client.num_classes
     )

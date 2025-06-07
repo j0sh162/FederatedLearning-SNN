@@ -149,24 +149,18 @@ def load_dataset(
     path,
     num_partitions: int,
     batch_size: int,
-    val_ratio: float = 0.1,
+    seed: int,
     non_iid=True,
 ):
-    """val_ratio is used to vary data amount among clients"""
-    transform = transforms.ToTensor()
-
+    collate_fn = None
     if name == "mnist":
         trainSet, testSet = get_MNISTdataset(path)
-        collate_fn = None
     elif name == "cifar10":
         trainSet, testSet = get_CIFARdataset(path)
-        collate_fn = None
     elif name == "NMNIST":
         trainSet, testSet = get_NMNIST_dataset(path)
         if cfg.model._target_ == "SNN_Models.SNN.Net":
             collate_fn = tonic.collation.PadTensors(batch_first=False)
-        else:
-            collate_fn = None
     else:
         raise ValueError(f"Unsupported dataset: {name}")
 
@@ -177,37 +171,17 @@ def load_dataset(
         num_images = len(trainSet) // num_partitions
         partition_length = [num_images] * num_partitions
         trainsets = random_split(
-            trainSet, partition_length, torch.Generator().manual_seed(42)
+            trainSet, partition_length, torch.Generator().manual_seed(seed)
         )  # For repetition
 
     # partition into train and validation sets
     trainingList = []
-    validationList = []
     for partition in trainsets:
-        total = len(partition)
-        validation_length = int(val_ratio * total)
-        train_length = total - validation_length
-
-        for_training, for_validation = random_split(
-            partition,
-            [train_length, validation_length],
-            generator=torch.Generator().manual_seed(42),
-        )
-
         trainingList.append(
             DataLoader(
-                for_training,
+                partition,
                 batch_size=batch_size,
                 shuffle=True,
-                num_workers=2,
-                collate_fn=collate_fn,
-            )
-        )
-        validationList.append(
-            DataLoader(
-                for_validation,
-                batch_size=batch_size,
-                shuffle=False,
                 num_workers=2,
                 collate_fn=collate_fn,
             )
@@ -215,8 +189,6 @@ def load_dataset(
 
     print("BATCH SIZE: ", batch_size)
     testList = DataLoader(
-        testSet,
-        batch_size=batch_size,  # originally 128
-        collate_fn=collate_fn,
+        testSet, batch_size=batch_size, shuffle=False, collate_fn=collate_fn
     )
-    return trainingList, validationList, testList
+    return trainingList, testList

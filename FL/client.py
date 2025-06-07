@@ -90,7 +90,7 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 # Returns a function that spawns a client in the main
-def generate_client_fn(trainloaders, valloaders, model_cfg, seed):
+def generate_client_fn(trainloaders, valloader, model_cfg, seed):
     """spawning clients for simulation"""
 
     def client_fn(clientID: str):
@@ -98,7 +98,7 @@ def generate_client_fn(trainloaders, valloaders, model_cfg, seed):
         # print(f"Generate client function with id {clientID}")
         return FlowerClient(
             trainloader=trainloaders[int(clientID)],
-            valloader=valloaders[int(clientID)],
+            valloader=valloader,
             model_cfg=model_cfg,
             seed=seed,
         ).to_client()

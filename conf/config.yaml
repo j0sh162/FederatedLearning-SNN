@@ -2,12 +2,12 @@
 #FL Settings
 fl:
   num_rounds: 10
-  num_clients: 100
+  num_clients: 2
   non_iid: False # Set to false for iid; Set to true for non-iid
   differential_privacy: False
   noise_multiplier: 0.05
   clipping_norm: 0.3 # Recommendation by Flower
-  num_sampled_clients: 20
+  num_sampled_clients: 2
 
 
 #Client settings - what server tell each client to use in their local training
@@ -49,5 +49,5 @@ seed: 42
 
 defaults: #Here we define which model and strategy we wish to use,
   - strategy: fedavg #create a config in conf/strategy and define the strategy parameters
-  - model: SNN #create a model yaml in conf/model and define the input parameters for that model
+  - model: EventProp #create a model yaml in conf/model and define the input parameters for that model
 
