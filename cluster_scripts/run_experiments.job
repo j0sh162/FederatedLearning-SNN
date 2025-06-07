@@ -16,6 +16,6 @@ module load Anaconda3/2023.07-2
 source venv/bin/activate
 
 # Check whether the GPU is available
-srun python main.py model=SNN dataset.name=NMNIST ++fl.num_rounds=10 ++fl.num_clients=100
-srun python main.py model=SNN dataset.name=NMNIST ++fl.num_rounds=1 ++fl.num_clients=5
+srun python main.py model=SNN dataset.name=NMNIST ++fl.num_rounds=10 ++fl.num_clients=100 ++client.learning_rate=2e-2 ++client.local_epochs=1
+srun python main.py model=SNN dataset.name=NMNIST ++fl.num_rounds=1 ++fl.num_clients=5 ++client.learning_rate=2e-2 ++client.local_epochs=1
 srun python ./SNN_models/old/SNN_standalone.py --seed 42 --batchsize 128
