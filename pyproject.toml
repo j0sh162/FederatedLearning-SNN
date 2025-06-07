@@ -22,6 +22,8 @@ dependencies = [
     "snntorch",
     "rich",
     "matplotlib",
+    "progress",
+    "tensorboard"
 ]
 
 [tool.setuptools]

@@ -3,8 +3,6 @@ from collections import defaultdict
 import numpy as np
 import tonic
 import torch
-import numpy as np
-from collections import defaultdict
 from tonic import MemoryCachedDataset
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
@@ -24,6 +22,7 @@ def get_CIFARdataset(path):
     test = datasets.CIFAR10(root=path, train=False, download=True, transform=tr)
     return train, test
 
+
 def get_NMNIST_dataset(path):
     sensor_size = tonic.datasets.NMNIST.sensor_size
     frame_transform = tonic.transforms.Compose(
@@ -32,8 +31,10 @@ def get_NMNIST_dataset(path):
             tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
         ]
     )
- 
-    train_dataset = tonic.datasets.NMNIST(save_to="./data", train=True, transform=frame_transform)
+
+    train_dataset = tonic.datasets.NMNIST(
+        save_to="./data", train=True, transform=frame_transform
+    )
 
     testset = tonic.datasets.NMNIST(
         save_to="./data", transform=frame_transform, train=False
@@ -46,6 +47,7 @@ def get_NMNIST_dataset(path):
     # )
     # testset = MemoryCachedDataset(testset)
     return train_dataset, testset
+
 
 """def get_NMNIST_dataset(path, limit=1000):
     sensor_size = tonic.datasets.NMNIST.sensor_size
@@ -84,6 +86,7 @@ def get_NMNIST_dataset(path):
 
     return trainset, testset"""
 
+
 def get_dataset_targets(dataset):
     """Retrieve labels from dataset even if it doesn't have a 'targets' attribute."""
     try:
@@ -91,6 +94,7 @@ def get_dataset_targets(dataset):
     except AttributeError:
         # Fallback: collect labels by indexing
         return [dataset[i][1] for i in range(len(dataset))]
+
 
 def non_iid_partition(trainSet, num_clients, num_classes=10, samples_per_class=1000):
     targets = np.array(trainSet.targets)
@@ -110,7 +114,10 @@ def non_iid_partition(trainSet, num_clients, num_classes=10, samples_per_class=1
     ]
     return client_datasets
 
-def dirichlet_non_iid_partition(dataset, num_clients, num_classes=10, alpha=0.5, min_size=1):
+
+def dirichlet_non_iid_partition(
+    dataset, num_clients, num_classes=10, alpha=0.5, min_size=1
+):
     targets = np.array(get_dataset_targets(dataset))
     class_indices = [np.where(targets == y)[0] for y in range(num_classes)]
 
@@ -121,11 +128,12 @@ def dirichlet_non_iid_partition(dataset, num_clients, num_classes=10, alpha=0.5,
             if len(idx_y) == 0:
                 continue
             np.random.shuffle(idx_y)
-            counts = np.random.multinomial(len(idx_y),
-                                           np.random.dirichlet([alpha]*num_clients))
+            counts = np.random.multinomial(
+                len(idx_y), np.random.dirichlet([alpha] * num_clients)
+            )
             start = 0
             for cid, cnt in enumerate(counts):
-                client_idx[cid].extend(idx_y[start:start+cnt])
+                client_idx[cid].extend(idx_y[start : start + cnt])
                 start += cnt
 
         sizes = [len(idxs) for idxs in client_idx]

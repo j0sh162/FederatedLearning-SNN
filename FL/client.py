@@ -1,29 +1,34 @@
+import random
 from collections import OrderedDict
 from typing import Dict
 
 import flwr as fl
+import numpy as np
 import torch
 from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
 from rich.logging import RichHandler
 
 from FL.training_utils import test, train
-from SNN_Models import EventProp,Spide
-from SNN_Models import SNN_utils
+from SNN_Models import EventProp, SNN_utils, Spide
 
 
 class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, trainloader, valloader, model_cfg) -> None:
+    def __init__(self, trainloader, valloader, model_cfg, seed) -> None:
         super().__init__()
         self.trainloader = trainloader
         self.valloader = valloader
         self.model = instantiate(model_cfg)
         self.model_cfg = model_cfg
+        self.seed = seed
+        # Seeds have to be set anew because the client is spawned in a new process
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+
         # run on GPU if available else CPU
         self.device = (
-            torch.device("cuda")
-            if torch.cuda.is_available()
-            else torch.device("cpu")
+            torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         )
 
     # Copies the parameters of the global model into your local
@@ -58,11 +63,11 @@ class FlowerClient(fl.client.NumPyClient):
             )
         elif self.model_cfg._target_ == "SNN_Models.EventProp.SNN":
             EventProp.train(
-                self.model, optim, self.trainloader,config["local_epochs"],self.device
+                self.model, optim, self.trainloader, config["local_epochs"], self.device
             )
         elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
             Spide.train_fl(
-                self.model, self.trainloader,self.device, config["local_epochs"],optim
+                self.model, self.trainloader, self.device, config["local_epochs"], optim
             )
         # elif self.model_cfg._target_ == "FL.CNN.Net":
         #     train(
@@ -76,16 +81,16 @@ class FlowerClient(fl.client.NumPyClient):
         if self.model_cfg._target_ == "SNN_Models.SNN.Net":
             loss, accuracy = SNN_utils.test(self.model, self.valloader, self.device)
         elif self.model_cfg._target_ == "SNN_Models.EventProp.SNN":
-            loss,accuracy = EventProp.test(self.model,self.valloader,self.device)
+            loss, accuracy = EventProp.test(self.model, self.valloader, self.device)
         elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
-            loss,accuracy = Spide.test_fl(self.model,self.valloader,self.device)
+            loss, accuracy = Spide.test_fl(self.model, self.valloader, self.device)
         elif self.model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}
 
 
 # Returns a function that spawns a client in the main
-def generate_client_fn(trainloaders, valloaders, model_cfg):
+def generate_client_fn(trainloaders, valloaders, model_cfg, seed):
     """spawning clients for simulation"""
 
     def client_fn(clientID: str):
@@ -95,6 +100,7 @@ def generate_client_fn(trainloaders, valloaders, model_cfg):
             trainloader=trainloaders[int(clientID)],
             valloader=valloaders[int(clientID)],
             model_cfg=model_cfg,
+            seed=seed,
         ).to_client()
 
     return client_fn
