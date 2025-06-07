@@ -8,3 +8,8 @@ min_available_clients: ${fl.num_clients}
 on_fit_config_fn:
   _target_: FL.server.get_on_fit_config
   config: ${client}
+# fit_metrics_aggregation_fn:
+#   _target_: FL.server.get_fit_metrics_aggregation_fn
+
+# evaluate_metrics_aggregation_fn:
+#   _target_: FL.server.get_evaluate_metrics_aggregation_fn

@@ -1,5 +1,4 @@
 import torch
-from snntorch import functional as SF
 
 
 def train(net, train_loader, optimizer, epochs, device: str):

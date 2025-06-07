@@ -2,10 +2,12 @@
 import gc
 import logging
 import pickle
+import random
 from pathlib import Path
 
 import flwr as fl
 import hydra
+import numpy as np
 import torch
 from flwr.server.strategy import (
     DifferentialPrivacyClientSideFixedClipping,
@@ -17,6 +19,7 @@ from omegaconf import DictConfig, OmegaConf
 from rich import print
 from rich.logging import RichHandler
 from sympy import evaluate
+from torch.utils.tensorboard import SummaryWriter
 
 from FL.client import generate_client_fn
 from FL.server import get_evaluate_fn, get_on_fit_config
@@ -28,6 +31,11 @@ def main(cfg: DictConfig):
     # 1. Parse config and get experiment output dir
     print(OmegaConf.to_yaml(cfg))
     logger = logging.getLogger("flwr")
+    seed = int(cfg.seed)
+    logger.info(f"Using seed: {seed}")
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
     logger.info(
         "Starting Flower simulation, config: num_rounds=%d",
@@ -51,7 +59,7 @@ def main(cfg: DictConfig):
     print(len(trainLoaders), len(trainLoaders[0].dataset))
 
     # 3. Define clients - allows to initialize clients
-    client_fn = generate_client_fn(trainLoaders, validationLoaders, cfg.model)
+    client_fn = generate_client_fn(trainLoaders, validationLoaders, cfg.model, seed)
     print(
         "cfg num_rounds: ", cfg.fl.num_rounds, "cfg num classes", cfg.client.num_classes
     )
@@ -87,7 +95,7 @@ def main(cfg: DictConfig):
         strategy=strategy,
         client_resources={
             "num_cpus": 1,  # was 2
-            "num_gpus": 0.25
+            "num_gpus": 0.2
             if torch.cuda.is_available()
             else 0,  # use 0.5 gpu if available
         },  # run client concurrently on gpu 0.25 = 4 clients concurrently
@@ -98,6 +106,23 @@ def main(cfg: DictConfig):
     results = {"history": history}  # save anything else needed
     with open(results_path, "wb") as h:
         pickle.dump(results, h, protocol=pickle.HIGHEST_PROTOCOL)
+
+    # 7. Log history metrics to TensorBoard
+    writer = SummaryWriter(log_dir=f"runs/federated_server/{seed}")
+
+    for metric_name, values in history.metrics_distributed.items():
+        for round_num, value in values:
+            writer.add_scalar(f"distributed/{metric_name}", value, round_num)
+    for metric_name, values in history.metrics_centralized.items():
+        for round_num, value in values:
+            writer.add_scalar(f"centralized/{metric_name}", value, round_num)
+    for round_num, loss in history.losses_distributed:
+        writer.add_scalar("distributed/loss", loss, round_num)
+    for round_num, loss in history.losses_centralized:
+        writer.add_scalar("centralized/loss", loss, round_num)
+
+    writer.flush()
+    writer.close()
 
 
 if __name__ == "__main__":
