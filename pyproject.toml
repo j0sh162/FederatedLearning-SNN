@@ -23,6 +23,7 @@ dependencies = [
     "rich",
     "matplotlib",
     "progress",
+    "tensorboard"
 ]
 
 [tool.setuptools]

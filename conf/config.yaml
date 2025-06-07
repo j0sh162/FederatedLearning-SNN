@@ -1,9 +1,8 @@
 
 #FL Settings
 fl:
-  num_rounds: 10
-  num_clients: 100
-  batch_size: 20
+  num_rounds: 2
+  num_clients: 5
   non_iid: True # Set to false for iid; Set to true for non-iid
   differential_privacy: False
   noise_multiplier: 0.05
@@ -45,6 +44,8 @@ datasets:
     channels: 2
     num_classes: 10
     batch_size: 128 # was 50 # for testing
+
+seed: 42
 
 defaults: #Here we define which model and strategy we wish to use,
   - strategy: fedavg #create a config in conf/strategy and define the strategy parameters

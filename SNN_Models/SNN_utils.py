@@ -1,6 +1,7 @@
 import torch
 from flwr import common
 from snntorch import functional as SF
+from snntorch import surrogate, utils
 
 
 def train(net, train_loader, optimizer, epochs, device: str):
