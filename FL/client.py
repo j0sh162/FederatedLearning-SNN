@@ -10,7 +10,7 @@ from hydra.utils import instantiate
 from rich.logging import RichHandler
 
 from FL.training_utils import test, train
-from SNN_Models import EventProp, SNN_utils, Spide
+from SNN_Models import EventProp, SNN_utils,Spide
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -65,8 +65,8 @@ class FlowerClient(fl.client.NumPyClient):
             EventProp.train(
                 self.model, optim, self.trainloader, config["local_epochs"], self.device
             )
-        elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
-            Spide.train_fl(
+        elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvNet":
+            Spide.train(
                 self.model, self.trainloader, self.device, config["local_epochs"], optim
             )
         # elif self.model_cfg._target_ == "FL.CNN.Net":
@@ -82,8 +82,8 @@ class FlowerClient(fl.client.NumPyClient):
             loss, accuracy = SNN_utils.test(self.model, self.valloader, self.device)
         elif self.model_cfg._target_ == "SNN_Models.EventProp.SNN":
             loss, accuracy = EventProp.test(self.model, self.valloader, self.device)
-        elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
-            loss, accuracy = Spide.test_fl(self.model, self.valloader, self.device)
+        elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvNet":
+            loss, accuracy = Spide.test(self.valloader, self.model, self.device)
         elif self.model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}
