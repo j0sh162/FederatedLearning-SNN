@@ -25,4 +25,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["FL", "SNN_Models","Training"]
+packages = ["FL", "biograd", "Training"]

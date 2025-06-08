@@ -28,12 +28,6 @@ soft_error_step = 19
 sleep_spike_ts = 50
 
 # Define Training parameters
-val_size = 10000
-train_batch_size = 128
-sleep_batch_size = 128
-test_batch_size = 1
-epoch = 100
-save_epoch = 1
 lr = 1.0e-3
 sleep_oja_power = 2.0
 sleep_lr = 1.0e-4 / 3.
@@ -66,7 +60,7 @@ class FlowerClient(fl.client.NumPyClient):
 
     # Gets the parameters of your local model
     def get_parameters(self, config: Dict[str, Scalar]):
-        return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        return [val.detach().cpu().numpy() for _, val in self.model.state_dict().items()]
 
     # Receives from server parameters from global model and set of instructions
     # and trains the model (standard pytorch training method)
@@ -114,7 +108,7 @@ def train(net, train_loader, optimizer, epochs, device: str):
     feedback_ratio.append(ratio_list)
     # Start training
     with torch.no_grad():
-        for ee in trange(epoch, desc="Epoch"):
+        for ee in trange(epochs, desc="Epoch"):
             # Training
             train_num = len(train_loader.dataset)
             train_correct = 0
@@ -129,6 +123,7 @@ def train(net, train_loader, optimizer, epochs, device: str):
                 train_correct += ((predict_label == labels).sum().to("cpu")).item()
 
                 # Put network to sleep for feedback training
+                sleep_batch_size = event_img.size(0)
                 net.sleep_feedback_update(sleep_batch_size, sleep_spike_ts, sleep_oja_power, sleep_lr)
 
                 # Compute angle and ratio between feedback weight and forward weight after each update

@@ -73,7 +73,7 @@ class BioGradNetworkWithSleep(nn.Module):
 
         """
         # print("before: ", spike_data.shape)
-        spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
+        #spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
         spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
         batch_size = spike_data.shape[0]
         spike_ts = spike_data.shape[-1]
@@ -223,7 +223,7 @@ class BioGradNetworkWithSleep(nn.Module):
 
         """
         # print("before: ", spike_data.shape)
-        spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
+        #spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
         spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
         batch_size = spike_data.shape[0]
         spike_ts = spike_data.shape[-1]
