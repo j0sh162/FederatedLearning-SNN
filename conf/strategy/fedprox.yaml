@@ -1,10 +1,11 @@
 ---
-_target_: flwr.server.strategy.FedAvg #flower FedAvg function path, below all required parameters defined for this function
-fraction_fit: 1
+_target_: flwr.server.strategy.FedProx #flower FedAvg function path, below all required parameters defined for this function
+fraction_fit: 0.00001
 min_fit_clients: ${client.num_clients_per_round_fit}
-fraction_evaluate: 1
+fraction_evaluate: 0.00001
 min_evaluate_clients: ${client.num_clients_per_round_fit}
 min_available_clients: ${fl.num_clients}
+proximal_mu: 1
 on_fit_config_fn:
   _target_: FL.server.get_on_fit_config
   config: ${client}
@@ -16,4 +17,4 @@ on_fit_config_fn:
 # min_evaluate_clients (int, optional) – Minimum number of clients used during validation. Defaults to 2.
 # min_available_clients (int, optional) – Minimum number of total clients in the system. Defaults to 2.
 # on_fit_config_fn (Callable[[int], Dict[str, Scalar]], optional) – Function used to configure training. Defaults to None.
-
+# proximal_mu (float) – The weight of the proximal term used in the optimization. 0.0 makes this strategy equivalent to FedAvg, and the higher the coefficient, the more regularization will be used (that is, the client parameters will need to be closer to the server parameters during training).

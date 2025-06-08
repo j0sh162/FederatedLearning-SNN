@@ -1,13 +1,16 @@
 ---
-_target_: flwr.server.strategy.FedAvg #flower FedAvg function path, below all required parameters defined for this function
-fraction_fit: 1
+_target_: flwr.server.strategy.FedOpt #flower FedOpt function path, below all required parameters defined for this function
+fraction_fit: 0.00001
 min_fit_clients: ${client.num_clients_per_round_fit}
-fraction_evaluate: 1
+fraction_evaluate: 0.00001
 min_evaluate_clients: ${client.num_clients_per_round_fit}
 min_available_clients: ${fl.num_clients}
 on_fit_config_fn:
   _target_: FL.server.get_on_fit_config
   config: ${client}
+initial_parameters:
+  _target_: FL.CNN.model_to_parameters
+  model: ${model}
 
 # Description of parameters:
 # fraction_fit (float, optional) – Fraction of clients used during training. In case min_fit_clients is larger than fraction_fit * available_clients, min_fit_clients will still be sampled. Defaults to 1.0.
@@ -16,4 +19,10 @@ on_fit_config_fn:
 # min_evaluate_clients (int, optional) – Minimum number of clients used during validation. Defaults to 2.
 # min_available_clients (int, optional) – Minimum number of total clients in the system. Defaults to 2.
 # on_fit_config_fn (Callable[[int], Dict[str, Scalar]], optional) – Function used to configure training. Defaults to None.
+# eta (float, optional) – Server-side learning rate. Defaults to 1e-1.
+# eta_l (float, optional) – Client-side learning rate. Defaults to 1e-1.
+# beta_1 (float, optional) – Momentum parameter. Defaults to 0.0.
+# beta_2 (float, optional) – Second moment parameter. Defaults to 0.0.
+# tau (float, optional) – Controls the algorithm’s degree of adaptability. Defaults to 1e-9.
+# initial_parameters setting initial global parameters
 
