@@ -135,12 +135,6 @@ class SpikeCELoss(nn.Module):
         return loss
 
 def train(model, optimizer, loader,epochs,device,logging = False):
-    total_correct = 0.
-    total_loss = 0.
-    total_samples = 0.
-    total_correct = 0.
-    total_loss = 0.
-    total_samples = 0.
     num_batches = len(loader)
     
     writer = SummaryWriter(f"runs/SurrogateGradient_centralized/eventprop_seed_{0}") if logging else None
@@ -152,8 +146,10 @@ def train(model, optimizer, loader,epochs,device,logging = False):
         tau_s = model.tau_s
         T = model.T
         criterion = model.criterion
-    # TODO add epochs 
 
+        total_correct = 0.
+        total_loss = 0.
+        total_samples = 0.  
 
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
         for batch_idx, (input, target) in enumerate(iter(loader)):
@@ -301,6 +297,6 @@ if __name__ == "__main__":
 
     # for epoch in range(args.epochs):
     # print('Epoch {:03d}/{:03d}'.format(1, args.epochs))
-    train(model, optimizer, train_loader, 10,device)
+    train(model, optimizer, train_loader, args.epochs, device)
     test(model, test_loader, device)
         # scheduler.step()

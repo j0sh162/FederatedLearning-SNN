@@ -9,5 +9,5 @@ on_fit_config_fn:
   _target_: FL.server.get_on_fit_config
   config: ${client}
 initial_parameters:
-  _target_: FL.CNN.model_to_parameters
+  _target_: FL.training_utils.model_to_parameters
   model: ${model}
