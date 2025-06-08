@@ -48,18 +48,18 @@ def main(cfg: DictConfig):
     dataset_name = cfg.dataset.name
     dataset_path = cfg.datasets[dataset_name].path
     print(f"IID: {cfg.fl.non_iid}")
-    trainLoaders, validationLoaders, testLoader = dataset.load_dataset(
+    trainLoaders, testLoader = dataset.load_dataset(
         dataset_name,
         dataset_path,
         cfg.fl.num_clients,
         cfg.datasets[dataset_name].batch_size,  # was originally cfg.fl.batch_size
-        0.1,
+        seed,
         cfg.fl.non_iid,
     )
     print(len(trainLoaders), len(trainLoaders[0].dataset))
 
     # 3. Define clients - allows to initialize clients
-    client_fn = generate_client_fn(trainLoaders, validationLoaders, cfg.model, seed)
+    client_fn = generate_client_fn(trainLoaders, testLoader, cfg.model, seed)
     print(
         "cfg num_rounds: ", cfg.fl.num_rounds, "cfg num classes", cfg.client.num_classes
     )
@@ -73,7 +73,7 @@ def main(cfg: DictConfig):
                                           on_fit_config_fn=get_on_fit_config(cfg.client),
                                           evaluate_fn = get_evaluate_fn(cfg.client.num_classes,testLoader))"""  # At the end of aggregation we obtain new global model and evaluate it
     base_strategy = instantiate(
-        cfg.strategy, evaluate_fn=get_evaluate_fn(cfg.model, testLoader)
+        cfg.strategy, evaluate_fn=get_evaluate_fn(cfg, testLoader)
     )
 
     # Server-side central differential privacy

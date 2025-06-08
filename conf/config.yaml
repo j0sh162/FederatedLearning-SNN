@@ -49,5 +49,5 @@ seed: 42
 
 defaults: #Here we define which model and strategy we wish to use,
   - strategy: fedavg #create a config in conf/strategy and define the strategy parameters
-  - model: SPIDE #create a model yaml in conf/model and define the input parameters for that model
+  - model: SNN #create a model yaml in conf/model and define the input parameters for that model
 
