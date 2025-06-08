@@ -39,7 +39,7 @@ datasets:
     num_classes: 10
     batch_size: 64
   NMNIST:
-    path: ./data
+    path: ./data/NMNIST
     input_size: 34
     channels: 2
     num_classes: 10
