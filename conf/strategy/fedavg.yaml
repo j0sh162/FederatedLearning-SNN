@@ -1,15 +1,18 @@
 ---
 _target_: flwr.server.strategy.FedAvg #flower FedAvg function path, below all required parameters defined for this function
-fraction_fit: 1.0
+fraction_fit: 1
 min_fit_clients: ${client.num_clients_per_round_fit}
-fraction_evaluate: 1.0
+fraction_evaluate: 1
 min_evaluate_clients: ${client.num_clients_per_round_fit}
 min_available_clients: ${fl.num_clients}
 on_fit_config_fn:
   _target_: FL.server.get_on_fit_config
   config: ${client}
-# fit_metrics_aggregation_fn:
-#   _target_: FL.server.get_fit_metrics_aggregation_fn
 
-# evaluate_metrics_aggregation_fn:
-#   _target_: FL.server.get_evaluate_metrics_aggregation_fn
+# Description of parameters:
+# fraction_fit (float, optional) – Fraction of clients used during training. In case min_fit_clients is larger than fraction_fit * available_clients, min_fit_clients will still be sampled. Defaults to 1.0.
+# fraction_evaluate (float, optional) – Fraction of clients used during validation. In case min_evaluate_clients is larger than fraction_evaluate * available_clients, min_evaluate_clients will still be sampled. Defaults to 1.0.
+# min_fit_clients (int, optional) – Minimum number of clients used during training. Defaults to 2.
+# min_evaluate_clients (int, optional) – Minimum number of clients used during validation. Defaults to 2.
+# min_available_clients (int, optional) – Minimum number of total clients in the system. Defaults to 2.
+# on_fit_config_fn (Callable[[int], Dict[str, Scalar]], optional) – Function used to configure training. Defaults to None.

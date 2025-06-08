@@ -6,6 +6,7 @@ from snntorch import surrogate, utils
 
 def train(net, train_loader, optimizer, epochs, device: str):
     net.train()
+    net.net.train()
     net.to(device)
     num_batches = len(train_loader)
     loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
@@ -15,7 +16,6 @@ def train(net, train_loader, optimizer, epochs, device: str):
                 data = data.to(device)
                 targets = targets.to(device)
 
-                net.net.train()
                 spk_rec = net.forward(data)
                 loss_val = loss_fn(spk_rec, targets)
 

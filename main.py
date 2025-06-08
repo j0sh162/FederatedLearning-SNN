@@ -49,6 +49,7 @@ def main(cfg: DictConfig):
     dataset_path = cfg.datasets[dataset_name].path
     print(f"IID: {cfg.fl.non_iid}")
     trainLoaders, testLoader = dataset.load_dataset(
+        cfg,
         dataset_name,
         dataset_path,
         cfg.fl.num_clients,
@@ -147,3 +148,5 @@ if __name__ == "__main__":
         ray_logger.removeHandler(handler)
     ray_logger.addHandler(RichHandler(markup=True, rich_tracebacks=True))
     main()
+
+# tensorboard --logdir-runs
