@@ -5,15 +5,24 @@
 #SBATCH --job-name=RunExperiments
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=9
-#SBATCH --time=00:20:00
-#SBATCH --output=~/slurm/slurm_output_experiments_%A.out
+#SBATCH --time=08:00:00
+#SBATCH --output=slurm/slurm_output_experiments_%A.out
 
 module purge
 module load 2023
 module load Anaconda3/2023.07-2
 
 # Activate your environment
-source venv/bin/activate
+source $HOME/venv/bin/activate
 
-# Check whether the GPU is available
-srun python main.py model=SNN dataset.name=NMNIST
+# Surrogate Gradient
+srun python $HOME/FederatedLearning-SNN/SNN_Models/old/SNN_standalone.py --seed 0 --batchsize 128 --epochs 2
+srun python $HOME/FederatedLearning-SNN/SNN_Models/old/SNN_standalone.py --seed 1 --batchsize 128 --epochs 2
+srun python $HOME/FederatedLearning-SNN/SNN_Models/old/SNN_standalone.py --seed 2 --batchsize 128 --epochs 2
+srun python $HOME/FederatedLearning-SNN/SNN_Models/old/SNN_standalone.py --seed 3 --batchsize 128 --epochs 2
+srun python $HOME/FederatedLearning-SNN/SNN_Models/old/SNN_standalone.py --seed 4 --batchsize 128 --epochs 2
+
+
+srun python $HOME/FederatedLearning-SNN/main.py model=SNN dataset.name=NMNIST ++seed=0 ++fl.num_rounds=1 ++fl.num_clients=5 ++client.num_clients_per_round_fit=5 ++client.num_clients_per_round_evaluate=5 ++client.lr=0.0002 ++client.local_epochs=1
+
+srun python $HOME/FederatedLearning-SNN/main.py model=SNN dataset.name=NMNIST ++seed=0 ++fl.num_rounds=1 ++fl.num_clients=10 ++client.num_clients_per_round_fit=10 ++client.num_clients_per_round_evaluate=10 ++client.lr=0.0002 ++client.local_epochs=1
