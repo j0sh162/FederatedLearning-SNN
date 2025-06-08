@@ -144,6 +144,7 @@ def dirichlet_non_iid_partition(
 
 
 def load_dataset(
+    cfg,
     name,
     path,
     num_partitions: int,
@@ -151,13 +152,15 @@ def load_dataset(
     seed: int,
     non_iid=True,
 ):
-
+    collate_fn = None
     if name == "mnist":
         trainSet, testSet = get_MNISTdataset(path)
     elif name == "cifar10":
         trainSet, testSet = get_CIFARdataset(path)
     elif name == "NMNIST":
         trainSet, testSet = get_NMNIST_dataset(path)
+        if cfg.model._target_ == "SNN_Models.SNN.Net":
+            collate_fn = tonic.collation.PadTensors(batch_first=False)
     else:
         raise ValueError(f"Unsupported dataset: {name}")
 
@@ -180,13 +183,12 @@ def load_dataset(
                 batch_size=batch_size,
                 shuffle=True,
                 num_workers=2,
+                collate_fn=collate_fn,
             )
         )
 
     print("BATCH SIZE: ", batch_size)
     testList = DataLoader(
-        testSet,
-        batch_size=batch_size,
-        shuffle=False
+        testSet, batch_size=batch_size, shuffle=False, collate_fn=collate_fn
     )
     return trainingList, testList

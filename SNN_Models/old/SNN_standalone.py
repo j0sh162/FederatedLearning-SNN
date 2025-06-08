@@ -1,8 +1,11 @@
 # Based on: https://ieeexplore.ieee.org/abstract/document/10242251
 # Adapted from: https://snntorch.readthedocs.io/en/latest/tutorials/tutorial_7.html
+import argparse
 import os
+import random
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import tonic
@@ -18,29 +21,33 @@ from torch.utils.tensorboard import SummaryWriter
 
 from SNN_Models import SNN
 from SNN_Models.SNN_utils import test
+from Training import dataset
 
-writer = SummaryWriter(f"runs/SurrogateGradient_centralized/seed_{0}")
+parser = argparse.ArgumentParser()
+parser.add_argument("--seed", type=int, default=0)
+parser.add_argument("--batchsize", type=int, default=128)
+parser.add_argument("--epochs", type=int, default=1)
+parser.add_argument("--num_iters", type=int, default=-1)
+args = parser.parse_args()
+print(args)
+
+torch.manual_seed(args.seed)
+random.seed(args.seed)
+np.random.seed(args.seed)
+
+writer = SummaryWriter(f"runs/SurrogateGradient_centralized/{args.seed}")
 
 sensor_size = tonic.datasets.NMNIST.sensor_size
 
 # Denoise removes isolated, one-off events
 # time_window
-frame_transform = transforms.Compose(
-    [
-        transforms.Denoise(filter_time=10000),
-        transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
-    ]
-)
-
-trainset = tonic.datasets.NMNIST(
-    save_to="./data", transform=frame_transform, train=True
-)
-testset = tonic.datasets.NMNIST(
-    save_to="./data", transform=frame_transform, train=False
-)
+trainset, testset = dataset.get_NMNIST_dataset("./data")
 
 transform = tonic.transforms.Compose(
-    [torch.from_numpy, torchvision.transforms.RandomRotation([-10, 10])]
+    [
+        # torch.from_numpy,
+        # torchvision.transforms.RandomRotation([-10, 10]),
+    ]
 )
 
 cached_trainset = MemoryCachedDataset(trainset, transform=transform)
@@ -48,18 +55,20 @@ cached_trainset = MemoryCachedDataset(trainset, transform=transform)
 # no augmentations for the testset
 cached_testset = MemoryCachedDataset(testset)
 
-batch_size = 128
+batch_size = args.batchsize
 train_loader = DataLoader(
     cached_trainset,
     batch_size=batch_size,
     collate_fn=tonic.collation.PadTensors(batch_first=False),
-    shuffle=True,
+    shuffle=False,
 )
 test_loader = DataLoader(
     cached_testset,
     batch_size=batch_size,
     collate_fn=tonic.collation.PadTensors(batch_first=False),
 )
+
+# train_loader, test_loader = dataset.load_dataset()
 
 device = (
     torch.device("cuda")
@@ -70,13 +79,8 @@ device = (
 )
 print(f"Using device: {device}")
 
-snn_net = SNN.Net(
-    input_shape=reversed(sensor_size),
-    num_hidden=None,
-    num_output=None,
-    spike_grad=surrogate.atan(),
-    beta=0.5,
-)
+snn_net = SNN.Net()
+
 if False:  # os.path.exists("snn_net.pt"):
     print("Loading existing model weights")
     # Load the model weights
@@ -84,11 +88,11 @@ if False:  # os.path.exists("snn_net.pt"):
         torch.load("snn_net.pt", weights_only=True, map_location=device)
     )
 
-optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=2e-2, betas=(0.9, 0.999))
+optimizer = torch.optim.AdamW(snn_net.net.parameters(), lr=0.0002, betas=(0.9, 0.999))
 loss_fn = SF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2)
 
-num_epochs = 1
-num_iters = 30
+num_epochs = args.epochs
+num_iters = args.num_iters
 num_batches = len(train_loader)
 
 hist = []
@@ -135,17 +139,20 @@ test_loss, test_acc = test(snn_net, test_loader, device)
 hist.append([epoch, batch_number, test_loss, test_acc, "test"])
 print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc * 100:.2f}%")
 
+torch.save(
+    snn_net.net.state_dict(),
+    f"runs/SurrogateGradient_centralized/{args.seed}/snn_net.pt",
+)
 
 writer.flush()
 writer.close()
-torch.save(snn_net.net.state_dict(), "snn_net.pt")
 
-fig = plt.figure(facecolor="w")
-df = pd.DataFrame(hist, columns=["epoch", "batch", "Loss", "Acc", "Set"])
-df.to_csv("acc_hist.csv", index=False)
-df["epoch_batch"] = df["epoch"].astype(str) + "-" + df["batch"].astype(str)
-sns.lineplot(data=df, x="epoch_batch", y="Acc", hue="Set")
-plt.title("Train/ Test Set Accuracy")
-plt.xlabel("Epoch-Batch")
-plt.ylabel("Accuracy")
-plt.show()
+# fig = plt.figure(facecolor="w")
+# df = pd.DataFrame(hist, columns=["epoch", "batch", "Loss", "Acc", "Set"])
+# df.to_csv("acc_hist.csv", index=False)
+# df["epoch_batch"] = df["epoch"].astype(str) + "-" + df["batch"].astype(str)
+# sns.lineplot(data=df, x="epoch_batch", y="Acc", hue="Set")
+# plt.title("Train/ Test Set Accuracy")
+# plt.xlabel("Epoch-Batch")
+# plt.ylabel("Accuracy")
+# plt.show()
