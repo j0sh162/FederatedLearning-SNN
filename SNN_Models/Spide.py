@@ -16,7 +16,7 @@ from modules.snn_spide_module import SNNSPIDEModule
 from modules.snn_modules import SNNIFFuncMultiLayer, SNNLIFFuncMultiLayer, SNNConv
 from utils import AverageMeter,accuracy
 import time
-
+from torch.utils.tensorboard import SummaryWriter
 
 
 
@@ -102,7 +102,7 @@ class SNNSPIDEConvNet(nn.Module):
         firing_rate = firing_rate.reshape(B, -1)
         return torch.sum(torch.mean(firing_rate, dim=1))
 
-def train(model,trainloader,device, epochs, optimizer,warmup=0):
+def train(model,trainloader,device, epochs, optimizer,warmup=0,logging = False):
     # switch to train mode
     model.train()
     criterion = nn.CrossEntropyLoss()
@@ -110,6 +110,9 @@ def train(model,trainloader,device, epochs, optimizer,warmup=0):
     data_time = AverageMeter()
     top5 = AverageMeter()
     end = time.time()
+    
+    writer = SummaryWriter(f"runs/SurrogateGradient_centralized/spide_seed_{0}") if logging else None
+    
 
     epoch_losses = []
     epoch_accs = []
@@ -118,6 +121,7 @@ def train(model,trainloader,device, epochs, optimizer,warmup=0):
     average_forward_firing_rate = 0.
     average_backward_firing_rate = 0.
     batch_num = 0
+    num_batches = len(trainloader)
 
     for current_iter in range(epochs):
         losses = AverageMeter()
@@ -147,6 +151,18 @@ def train(model,trainloader,device, epochs, optimizer,warmup=0):
             losses.update(loss.data.item(), inputs.size(0))
             top1.update(prec1.item(), inputs.size(0))
             top5.update(prec5.item(), inputs.size(0))
+            
+            if logging:
+                writer.add_scalar(
+                    "Loss/train",
+                    loss.item(),
+                    current_iter * num_batches + batch_idx,
+                )
+                writer.add_scalar(
+                    "Acc/train",
+                    top1.avg,
+                    current_iter * num_batches + batch_idx,
+                )
 
             # compute gradient and do SGD step
             scaled_loss = loss * 400
@@ -166,8 +182,9 @@ def train(model,trainloader,device, epochs, optimizer,warmup=0):
             batch_time.update(time.time() - end)
             end = time.time()
         print(f'loss: {loss}, Accuarcy:{top1.avg}')
-
-       
+    if logging:
+        writer.flush()
+        writer.close()
     return (losses.avg, top1.avg, average_forward_firing_rate/batch_num, average_backward_firing_rate/batch_num)
 
 

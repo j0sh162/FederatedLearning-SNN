@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Function
+from torch.utils.tensorboard import SummaryWriter
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class WrapperFunction(Function):
@@ -133,13 +134,17 @@ class SpikeCELoss(nn.Module):
         loss = self.celoss(-input / (self.xi * self.tau_s), target)
         return loss
 
-def train(model, optimizer, loader,epochs,device):
+def train(model, optimizer, loader,epochs,device,logging = False):
     total_correct = 0.
     total_loss = 0.
     total_samples = 0.
     total_correct = 0.
     total_loss = 0.
     total_samples = 0.
+    num_batches = len(loader)
+    
+    writer = SummaryWriter(f"runs/SurrogateGradient_centralized/eventprop_seed_{0}") if logging else None
+    
     for epoch in range(epochs):
         model.train()
         alpha = model.alpha
@@ -171,6 +176,18 @@ def train(model, optimizer, loader,epochs,device):
             total_correct += predictions.eq(target.data.view_as(predictions)).sum().item()
             total_loss += loss.item() * len(target)
             total_samples += len(target)
+            
+            if logging:
+                writer.add_scalar(
+                    "Loss/train",
+                    total_loss/total_samples,
+                    epoch * num_batches + batch_idx,
+                )
+                writer.add_scalar(
+                    "Acc/train",
+                    100*total_correct/total_samples,
+                    epoch * num_batches + batch_idx,
+                )
 
             optimizer.zero_grad()
             loss.backward()
@@ -185,6 +202,9 @@ def train(model, optimizer, loader,epochs,device):
 
         print('\t\tTrain: \tAcc {:.2f}  Loss {:.3f}'.format(100*total_correct/total_samples, total_loss/total_samples))
         scheduler.step()
+    if logging:
+        writer.flush()
+        writer.close()
     return total_loss/total_samples,100*total_correct/total_samples
 
 def test(model, loader, device):

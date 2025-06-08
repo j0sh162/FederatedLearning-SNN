@@ -147,3 +147,5 @@ if __name__ == "__main__":
         ray_logger.removeHandler(handler)
     ray_logger.addHandler(RichHandler(markup=True, rich_tracebacks=True))
     main()
+
+# tensorboard --logdir-runs

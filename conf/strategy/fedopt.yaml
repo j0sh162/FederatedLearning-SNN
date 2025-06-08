@@ -1,0 +1,13 @@
+---
+_target_: flwr.server.strategy.FedOpt #flower FedOpt function path, below all required parameters defined for this function
+fraction_fit: 1.0
+min_fit_clients: ${client.num_clients_per_round_fit}
+fraction_evaluate: 1.0
+min_evaluate_clients: ${client.num_clients_per_round_fit}
+min_available_clients: ${fl.num_clients}
+on_fit_config_fn:
+  _target_: FL.server.get_on_fit_config
+  config: ${client}
+initial_parameters:
+  _target_: FL.CNN.model_to_parameters
+  model: ${model}
