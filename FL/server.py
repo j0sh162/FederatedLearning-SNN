@@ -114,8 +114,8 @@ def get_evaluate_fn(model_cfg, testLoader):
             loss, accuracy = SNN_utils.test(model, testLoader, device)
         elif model_cfg._target_ == "SNN_Models.EventProp.SNN":
             loss, accuracy = EventProp.test(model, testLoader, device)
-        elif model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvMultiLayerNet":
-            loss, accuracy = Spide.test_fl(model, testLoader, device)
+        elif model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvNet":
+            loss, accuracy = Spide.test(testLoader,model, device)
         elif model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(model, testLoader, device)
         else:

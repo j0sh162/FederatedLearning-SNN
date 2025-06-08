@@ -1,5 +1,5 @@
 # It's good practice to rename the file/model to reflect the dataset
-_target_: SNN_Models.Spide.SNNSPIDEConvMultiLayerNet
+_target_: SNN_Models.Spide.SNNSPIDEConvNet
 cfg:
   # This 'MODEL' key matches the structure expected by your parse_cfg method
   MODEL:
@@ -24,8 +24,8 @@ cfg:
     # N-MNIST's sparse, event-based data behaves very differently from dense MNIST frames.
     time_step: 20    # SUGGESTION: N-MNIST often benefits from longer simulation times
     time_step_back: 10 # A good starting point could be half of time_step.
-    vth: 1.0     
-    vth_back: 1.0
+    vth: 0.2    
+    vth_back: 0.2
     u_rest: 0.0     
     u_rest_back: 0.0
     leaky: 0.9       

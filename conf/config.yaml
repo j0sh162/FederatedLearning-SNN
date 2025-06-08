@@ -2,20 +2,20 @@
 #FL Settings
 fl:
   num_rounds: 10
-  num_clients: 100
+  num_clients: 2
   non_iid: False # Set to false for iid; Set to true for non-iid
   differential_privacy: False
   noise_multiplier: 0.05
   clipping_norm: 0.3 # Recommendation by Flower
-  num_sampled_clients: 20
+  num_sampled_clients: 2
 
 
 #Client settings - what server tell each client to use in their local training
 client:
-  lr: 1.0 # learning rate
+  lr: 0.01 # learning rate
   betas: [0.9, 0.999] # betas for Adam optimizer
   momentum: 0.9
-  local_epochs: 10
+  local_epochs: 1
   num_classes: 10 # (N)MNIST data has 10 classes
   num_clients_per_round_fit: 2
   num_clients_per_round_evaluate: 2 #After each round if we have 100 clients 1/4 will be used to evaluate what's characteristic of the global model
@@ -49,5 +49,5 @@ seed: 42
 
 defaults: #Here we define which model and strategy we wish to use,
   - strategy: fedavg #create a config in conf/strategy and define the strategy parameters
-  - model: SNN #create a model yaml in conf/model and define the input parameters for that model
+  - model: SPIDE #create a model yaml in conf/model and define the input parameters for that model
 
