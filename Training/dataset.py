@@ -23,14 +23,30 @@ def get_CIFARdataset(path):
     return train, test
 
 
-def get_NMNIST_dataset(path):
+def get_NMNIST_dataset(path, cfg=None):
     sensor_size = tonic.datasets.NMNIST.sensor_size
-    frame_transform = tonic.transforms.Compose(
-        [
-            tonic.transforms.Denoise(filter_time=10000),
-            tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
-        ]
-    )
+    if cfg is not None:
+        if cfg.model._target_ == "biograd.network_w_biograd.BioGradNetworkWithSleep":
+            frame_transform = tonic.transforms.Compose(
+                [
+                    tonic.transforms.Denoise(filter_time=10000),
+                    tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=60),
+                ]
+            )
+        else:
+            frame_transform = tonic.transforms.Compose(
+                [
+                    tonic.transforms.Denoise(filter_time=10000),
+                    tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
+                ]
+            )
+    else:
+        frame_transform = tonic.transforms.Compose(
+            [
+                tonic.transforms.Denoise(filter_time=10000),
+                tonic.transforms.ToFrame(sensor_size=sensor_size, n_time_bins=20),
+            ]
+        )
 
     train_dataset = tonic.datasets.NMNIST(
         save_to="./data", train=True, transform=frame_transform
@@ -158,7 +174,7 @@ def load_dataset(
     elif name == "cifar10":
         trainSet, testSet = get_CIFARdataset(path)
     elif name == "NMNIST":
-        trainSet, testSet = get_NMNIST_dataset(path)
+        trainSet, testSet = get_NMNIST_dataset(path, cfg=cfg)
         if cfg.model._target_ == "SNN_Models.SNN.Net":
             collate_fn = tonic.collation.PadTensors(batch_first=False)
     else:

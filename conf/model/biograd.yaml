@@ -1,0 +1,3 @@
+---
+_target_: biograd.network_w_biograd.BioGradNetworkWithSleep #points to the model directory
+# num_classes: ${client.num_classes}
