@@ -1,15 +1,28 @@
+import copy
+import math
+
 import torch
 import torch.nn as nn
 from torch.distributions.bernoulli import Bernoulli
-import copy
-import math
+
 from biograd.network_cells import OnlineHiddenCell, OnlineOutputCell
+from biograd.online_error_functions import cross_entropy_loss_error_function
 
 
 class BioGradNetworkWithSleep(nn.Module):
-    """ Online Learning Network with Sleep Weight Mirror Feedback Learning """
+    """Online Learning Network with Sleep Weight Mirror Feedback Learning"""
 
-    def __init__(self, input_dim, output_dim, hidden_dim_list, param_dict, error_func, device):
+    def __init__(
+        self,
+        input_dim=2 * 34 * 34,
+        output_dim=10,
+        hidden_dim_list=[500, 100],
+        param_dict={
+            "hidden_layer": [(0.3, 0.3, 0.3, 1.0), (0.3, 0.3, 0.3, 1.0)],
+            "out_layer": (0.3, 0.3, 0.3, 1.0),
+        },
+        error_func=cross_entropy_loss_error_function,
+    ):
         """
 
         Args:
@@ -21,7 +34,13 @@ class BioGradNetworkWithSleep(nn.Module):
             device (device): device
         """
         super().__init__()
-
+        self.device = (
+            torch.device("cuda")
+            if torch.cuda.is_available()
+            else torch.device("mps")
+            if torch.backends.mps.is_available()
+            else torch.device("cpu")
+        )
         self.hidden_cells = []
         # Init Hidden Layers
         for idx, hh in enumerate(hidden_dim_list, 0):
@@ -32,26 +51,36 @@ class BioGradNetworkWithSleep(nn.Module):
                 forward_input_dim = hidden_dim_list[idx - 1]
 
             self.hidden_cells.append(
-                OnlineHiddenCell(nn.Linear(forward_input_dim, forward_output_dim).to(device),
-                                 nn.Linear(output_dim, hh, bias=False).to(device),
-                                 param_dict['hidden_layer'][idx],
-                                 forward_input_dim, forward_output_dim))
+                OnlineHiddenCell(
+                    nn.Linear(forward_input_dim, forward_output_dim).to(self.device),
+                    nn.Linear(output_dim, hh, bias=False).to(self.device),
+                    param_dict["hidden_layer"][idx],
+                    forward_input_dim,
+                    forward_output_dim,
+                )
+            )
         # Init Output Layer
-        self.output_cell = OnlineOutputCell(nn.Linear(hidden_dim_list[-1], output_dim).to(device),
-                                            param_dict['out_layer'],
-                                            hidden_dim_list[-1], output_dim)
+        self.output_cell = OnlineOutputCell(
+            nn.Linear(hidden_dim_list[-1], output_dim).to(self.device),
+            param_dict["out_layer"],
+            hidden_dim_list[-1],
+            output_dim,
+        )
 
         # Init Feedback Connections
         feedback_weight = copy.deepcopy(self.output_cell.forward_func.weight.data)
         for idx in reversed(range(len(self.hidden_cells))):
-            self.hidden_cells[idx].feedback_func.weight.data = copy.deepcopy(feedback_weight.t())
+            self.hidden_cells[idx].feedback_func.weight.data = copy.deepcopy(
+                feedback_weight.t()
+            )
             if idx > 0:
-                feedback_weight = torch.matmul(feedback_weight, self.hidden_cells[idx].forward_func.weight.data)
+                feedback_weight = torch.matmul(
+                    feedback_weight, self.hidden_cells[idx].forward_func.weight.data
+                )
 
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.error_func = error_func
-        self.device = device
         self.cos_func = nn.CosineSimilarity(dim=0)
 
     def train_online(self, spike_data, label_one_hot, soft_error_step):
@@ -73,8 +102,10 @@ class BioGradNetworkWithSleep(nn.Module):
 
         """
         # print("before: ", spike_data.shape)
-        #spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
-        spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
+        # spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
+        spike_data = spike_data.permute(
+            0, 2, 3, 4, 1
+        ).float()  # added 30/05/25 for compatibility with tonic
         batch_size = spike_data.shape[0]
         spike_ts = spike_data.shape[-1]
         if len(spike_data.shape) > 3:
@@ -84,22 +115,31 @@ class BioGradNetworkWithSleep(nn.Module):
         # Init Hidden Layer Cell States
         hidden_forward_states, hidden_feedback_states = [], []
         for cell in self.hidden_cells:
-            forward_state, feedback_state = cell.train_reset_state(batch_size, self.device)
+            forward_state, feedback_state = cell.train_reset_state(
+                batch_size, self.device
+            )
             hidden_forward_states.append(forward_state)
             hidden_feedback_states.append(feedback_state)
 
         # Init Output Layer Cell State
-        out_forward_state, out_feedback_state = self.output_cell.train_reset_state(batch_size, self.device)
+        out_forward_state, out_feedback_state = self.output_cell.train_reset_state(
+            batch_size, self.device
+        )
 
         # Start online simulation of the network
-        output = torch.zeros([batch_size, self.output_cell.output_dim], device=self.device)
+        output = torch.zeros(
+            [batch_size, self.output_cell.output_dim], device=self.device
+        )
         feedback_step = 0
         for tt in range(spike_ts):
             input_spike = spike_data[:, :, tt]
             for idx, cell in enumerate(self.hidden_cells, 0):
-                input_spike, hidden_forward_states[idx] = cell.train_forward_step(input_spike,
-                                                                                  hidden_forward_states[idx])
-            out_spike, out_forward_state = self.output_cell.train_forward_step(input_spike, out_forward_state)
+                input_spike, hidden_forward_states[idx] = cell.train_forward_step(
+                    input_spike, hidden_forward_states[idx]
+                )
+            out_spike, out_forward_state = self.output_cell.train_forward_step(
+                input_spike, out_forward_state
+            )
             output = output + out_spike
 
             # Start feedback simulation after a soft start
@@ -110,20 +150,40 @@ class BioGradNetworkWithSleep(nn.Module):
                 error_neg = -copy.deepcopy(error)
                 error_neg[error_neg < 0] = 0
 
-                pos_spike, neg_spike, out_feedback_state = self.output_cell.train_feedback_step(
-                    error_pos, error_neg, out_feedback_state)
+                pos_spike, neg_spike, out_feedback_state = (
+                    self.output_cell.train_feedback_step(
+                        error_pos, error_neg, out_feedback_state
+                    )
+                )
                 for idx in reversed(range(len(self.hidden_cells))):
-                    hidden_feedback_states[idx] = self.hidden_cells[idx].train_feedback_step(
-                        pos_spike, neg_spike, hidden_feedback_states[idx])
+                    hidden_feedback_states[idx] = self.hidden_cells[
+                        idx
+                    ].train_feedback_step(
+                        pos_spike, neg_spike, hidden_feedback_states[idx]
+                    )
                 feedback_step += 1
 
         # Predict label
         predict_label = torch.argmax(output, 1)
 
-        return predict_label, hidden_forward_states, hidden_feedback_states, out_forward_state, out_feedback_state, feedback_step
+        return (
+            predict_label,
+            hidden_forward_states,
+            hidden_feedback_states,
+            out_forward_state,
+            out_feedback_state,
+            feedback_step,
+        )
 
-    def train_update_parameter(self, hidden_forward_states, hidden_feedback_states,
-                               out_forward_state, out_feedback_state, feedback_step, lr):
+    def train_update_parameter(
+        self,
+        hidden_forward_states,
+        hidden_feedback_states,
+        out_forward_state,
+        out_feedback_state,
+        feedback_step,
+        lr,
+    ):
         """
         Update parameter of the SNN
 
@@ -138,14 +198,21 @@ class BioGradNetworkWithSleep(nn.Module):
         """
         # Update Hidden Layer weight and bias
         for idx, cell in enumerate(self.hidden_cells, 0):
-            trace_dw, trace_db = hidden_forward_states[idx][3], hidden_forward_states[idx][5]
+            trace_dw, trace_db = (
+                hidden_forward_states[idx][3],
+                hidden_forward_states[idx][5],
+            )
             error_volt = hidden_feedback_states[idx]
-            cell.train_update_parameter_sgd((error_volt, feedback_step, trace_dw, trace_db), lr)
+            cell.train_update_parameter_sgd(
+                (error_volt, feedback_step, trace_dw, trace_db), lr
+            )
 
         # Update Output Layer weight and bias
         trace_dw, trace_db = out_forward_state[3], out_forward_state[5]
         error_volt = out_feedback_state[4]
-        self.output_cell.train_update_parameter_sgd((error_volt, feedback_step, trace_dw, trace_db), lr)
+        self.output_cell.train_update_parameter_sgd(
+            (error_volt, feedback_step, trace_dw, trace_db), lr
+        )
 
     def sleep_feedback_update(self, batch_size, spike_ts, oja_power, lr):
         """
@@ -164,52 +231,87 @@ class BioGradNetworkWithSleep(nn.Module):
         for idx in reversed(range(len(self.hidden_cells))):
             # Generate Poisson Positive and Negative input spikes for this hidden layer
             hidden_output_dim = self.hidden_cells[idx].output_dim
-            poisson_spike_pos = Bernoulli(torch.full_like(torch.zeros(batch_size, hidden_output_dim, spike_ts,
-                                                                      device=self.device), noise_pos)).sample()
-            poisson_spike_neg = Bernoulli(torch.full_like(torch.zeros(batch_size, hidden_output_dim, spike_ts,
-                                                                      device=self.device), noise_neg)).sample()
+            poisson_spike_pos = Bernoulli(
+                torch.full_like(
+                    torch.zeros(
+                        batch_size, hidden_output_dim, spike_ts, device=self.device
+                    ),
+                    noise_pos,
+                )
+            ).sample()
+            poisson_spike_neg = Bernoulli(
+                torch.full_like(
+                    torch.zeros(
+                        batch_size, hidden_output_dim, spike_ts, device=self.device
+                    ),
+                    noise_neg,
+                )
+            ).sample()
 
             # Init Hidden Layer Cell States
             hidden_forward_states = []
-            for ii in range(idx+1, len(self.hidden_cells)):
-                forward_state = self.hidden_cells[ii].test_reset_state(batch_size, self.device)
+            for ii in range(idx + 1, len(self.hidden_cells)):
+                forward_state = self.hidden_cells[ii].test_reset_state(
+                    batch_size, self.device
+                )
                 hidden_forward_states.append(forward_state)
 
             # Init Output Layer Cell State
-            out_forward_state = self.output_cell.test_reset_state(batch_size, self.device)
+            out_forward_state = self.output_cell.test_reset_state(
+                batch_size, self.device
+            )
 
             # Init Hidden Layer Spike Trace and Output Spike Trace
-            hidden_spike_trace = torch.zeros(batch_size, hidden_output_dim, device=self.device)
-            output_spike_trace = torch.zeros(batch_size, self.output_dim, device=self.device)
+            hidden_spike_trace = torch.zeros(
+                batch_size, hidden_output_dim, device=self.device
+            )
+            output_spike_trace = torch.zeros(
+                batch_size, self.output_dim, device=self.device
+            )
 
             # Start Sleeping for this Hidden Layer
             for tt in range(spike_ts):
                 input_spike_pos = poisson_spike_pos[:, :, tt]
                 input_spike_neg = poisson_spike_neg[:, :, tt]
-                hidden_spike_trace = hidden_spike_trace + input_spike_pos - input_spike_neg
+                hidden_spike_trace = (
+                    hidden_spike_trace + input_spike_pos - input_spike_neg
+                )
                 if len(hidden_forward_states) == 0:
-                    spike_output, out_forward_state = self.output_cell.sleep_forward_step(input_spike_pos,
-                                                                                          input_spike_neg,
-                                                                                          out_forward_state)
+                    spike_output, out_forward_state = (
+                        self.output_cell.sleep_forward_step(
+                            input_spike_pos, input_spike_neg, out_forward_state
+                        )
+                    )
                 else:
-                    input_spike, hidden_forward_states[0] = self.hidden_cells[idx+1].sleep_forward_step(input_spike_pos,
-                                                                                                        input_spike_neg,
-                                                                                                        hidden_forward_states[0])
+                    input_spike, hidden_forward_states[0] = self.hidden_cells[
+                        idx + 1
+                    ].sleep_forward_step(
+                        input_spike_pos, input_spike_neg, hidden_forward_states[0]
+                    )
                     for ii in range(1, len(hidden_forward_states)):
-                        input_spike, hidden_forward_states[ii] = self.hidden_cells[idx+ii+1].test_forward_step(input_spike,
-                                                                                                               hidden_forward_states[ii])
-                    spike_output, out_forward_state = self.output_cell.test_forward_step(input_spike, out_forward_state)
+                        input_spike, hidden_forward_states[ii] = self.hidden_cells[
+                            idx + ii + 1
+                        ].test_forward_step(input_spike, hidden_forward_states[ii])
+                    spike_output, out_forward_state = (
+                        self.output_cell.test_forward_step(
+                            input_spike, out_forward_state
+                        )
+                    )
                 output_spike_trace = output_spike_trace + spike_output
 
             # Compute Correlation for feedback weight update
             corr_batch_sum = torch.matmul(hidden_spike_trace.t(), output_spike_trace)
 
             # Compute Decay base on Oja's Rule
-            oja_decay = torch.mul(torch.mean(torch.pow(output_spike_trace, oja_power), axis=0),
-                                  self.hidden_cells[idx].feedback_func.weight.data)
+            oja_decay = torch.mul(
+                torch.mean(torch.pow(output_spike_trace, oja_power), axis=0),
+                self.hidden_cells[idx].feedback_func.weight.data,
+            )
 
             # Update Feedback Weights for this Hidden Layer
-            self.hidden_cells[idx].feedback_func.weight.data += lr * (corr_batch_sum - oja_decay)
+            self.hidden_cells[idx].feedback_func.weight.data += lr * (
+                corr_batch_sum - oja_decay
+            )
 
     def test(self, spike_data):
         """
@@ -223,8 +325,10 @@ class BioGradNetworkWithSleep(nn.Module):
 
         """
         # print("before: ", spike_data.shape)
-        #spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
-        spike_data = spike_data.permute(0, 2, 3, 4, 1).float() # added 30/05/25 for compatibility with tonic
+        # spike_data = spike_data.permute(1, 0, 2, 3, 4) # TODO: only do this if FL
+        spike_data = spike_data.permute(
+            0, 2, 3, 4, 1
+        ).float()  # added 30/05/25 for compatibility with tonic
         batch_size = spike_data.shape[0]
         spike_ts = spike_data.shape[-1]
         if len(spike_data.shape) > 3:
@@ -241,13 +345,18 @@ class BioGradNetworkWithSleep(nn.Module):
         out_forward_state = self.output_cell.test_reset_state(batch_size, self.device)
 
         # Start online simulation of the network
-        output = torch.zeros([batch_size, self.output_cell.output_dim], device=self.device)
+        output = torch.zeros(
+            [batch_size, self.output_cell.output_dim], device=self.device
+        )
         for tt in range(spike_ts):
             input_spike = spike_data[:, :, tt]
             for idx, cell in enumerate(self.hidden_cells, 0):
-                input_spike, hidden_forward_states[idx] = cell.test_forward_step(input_spike,
-                                                                                 hidden_forward_states[idx])
-            out_spike, out_forward_state = self.output_cell.test_forward_step(input_spike, out_forward_state)
+                input_spike, hidden_forward_states[idx] = cell.test_forward_step(
+                    input_spike, hidden_forward_states[idx]
+                )
+            out_spike, out_forward_state = self.output_cell.test_forward_step(
+                input_spike, out_forward_state
+            )
             output = output + out_spike
 
         # Predict label
@@ -267,13 +376,18 @@ class BioGradNetworkWithSleep(nn.Module):
         angle_list, ratio_list = [], []
         forward_weight = copy.deepcopy(self.output_cell.forward_func.weight.data)
         for idx in reversed(range(len(self.hidden_cells))):
-            feedback_weight = copy.deepcopy(self.hidden_cells[idx].feedback_func.weight.data)
-            angle, ratio = self.compute_angle_ratio_between_weight_matrix(feedback_weight,
-                                                                          copy.deepcopy(forward_weight.t()))
+            feedback_weight = copy.deepcopy(
+                self.hidden_cells[idx].feedback_func.weight.data
+            )
+            angle, ratio = self.compute_angle_ratio_between_weight_matrix(
+                feedback_weight, copy.deepcopy(forward_weight.t())
+            )
             angle_list.append(angle)
             ratio_list.append(ratio)
             if idx > 0:
-                forward_weight = torch.matmul(forward_weight, self.hidden_cells[idx].forward_func.weight.data)
+                forward_weight = torch.matmul(
+                    forward_weight, self.hidden_cells[idx].forward_func.weight.data
+                )
 
         return angle_list, ratio_list
 
@@ -294,9 +408,9 @@ class BioGradNetworkWithSleep(nn.Module):
         flatten_weight2 = torch.flatten(weight2)
         weight1_norm = torch.norm(flatten_weight1)
         weight2_norm = torch.norm(flatten_weight2)
-        ratio = (weight1_norm / weight2_norm).to('cpu').item()
+        ratio = (weight1_norm / weight2_norm).to("cpu").item()
 
         weight_cos = self.cos_func(flatten_weight1, flatten_weight2)
-        angle = (180. / math.pi) * torch.acos(weight_cos).to('cpu').item()
+        angle = (180.0 / math.pi) * torch.acos(weight_cos).to("cpu").item()
 
         return angle, ratio
