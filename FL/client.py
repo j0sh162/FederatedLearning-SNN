@@ -100,7 +100,9 @@ class FlowerClient(fl.client.NumPyClient):
             self.model_cfg._target_
             == "biograd.network_w_biograd.BioGradNetworkWithSleep"
         ):
-            biograd_utils.test(self.model, self.trainloader, self.device)
+            loss, accuracy = biograd_utils.test(
+                self.model, self.trainloader, self.device
+            )
         elif self.model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}
