@@ -1,2 +1,2 @@
-python main.py model=SNN strategy=fedprox dataset.name=NMNIST ++seed=0 ++fl.num_rounds=10 ++fl.num_clients=5 ++fl.non_iid=True ++client.num_clients_per_round_fit=5 ++client.num_clients_per_round_evaluate=5 ++client.lr=0.0002 ++client.local_epochs=1
+python main.py model=SNN strategy=fedopt dataset.name=NMNIST ++seed=0 ++fl.num_rounds=10 ++fl.num_clients=5 ++fl.non_iid=True ++client.num_clients_per_round_fit=5 ++client.num_clients_per_round_evaluate=5 ++client.lr=0.0002 ++client.local_epochs=1
 python main.py model=SNN strategy=fedprox dataset.name=NMNIST ++seed=0 ++fl.num_rounds=10 ++fl.num_clients=5 ++fl.non_iid=True ++client.num_clients_per_round_fit=5 ++client.num_clients_per_round_evaluate=5 ++client.lr=0.0002 ++client.local_epochs=1
