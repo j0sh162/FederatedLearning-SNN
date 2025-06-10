@@ -12,7 +12,6 @@ from hydra.utils import instantiate
 from omegaconf import DictConfig
 from ray import client
 
-from biograd import biograd_utils
 from FL.CNN import Net
 from FL.training_utils import test
 from SNN_Models import EventProp, SNN_utils, Spide
@@ -126,8 +125,6 @@ def get_evaluate_fn(cfg, testLoader):
             loss, accuracy = Spide.test_fl(model, testLoader, device)
         elif cfg.model._target_ == "FL.CNN.Net":
             loss, accuracy = test(model, testLoader, device)
-        elif cfg.model._target_ == "biograd.network_w_biograd.BioGradNetworkWithSleep":
-            loss, accuracy = biograd_utils.test(model, testLoader, device)
         else:
             raise ValueError(f"Unsupported model configuration: {cfg.model}")
 
