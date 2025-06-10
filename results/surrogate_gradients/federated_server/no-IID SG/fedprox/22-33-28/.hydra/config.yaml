@@ -1,19 +1,28 @@
 strategy:
   _target_: flwr.server.strategy.FedAvg
-  fraction_fit: 1.0
+  fraction_fit: 1
   min_fit_clients: ${client.num_clients_per_round_fit}
-  fraction_evaluate: 1.0
+  fraction_evaluate: 1
   min_evaluate_clients: ${client.num_clients_per_round_fit}
   min_available_clients: ${fl.num_clients}
   on_fit_config_fn:
     _target_: FL.server.get_on_fit_config
     config: ${client}
 model:
-  _target_: SNN_Models.SNN.Net
+  _target_: SNN_Models.EventProp.SNN
+  input_dim: 2312
+  output_dim: 10
+  T: 20
+  dt: 1
+  tau_m: 20.0
+  tau_s: 5.0
+  xi: 0.4
+  alpha: 0.01
+  beta: 2
 fl:
   num_rounds: 10
   num_clients: 5
-  non_iid: false
+  non_iid: true
   differential_privacy: false
   noise_multiplier: 0.05
   clipping_norm: 0.3
@@ -44,9 +53,9 @@ datasets:
     num_classes: 10
     batch_size: 64
   NMNIST:
-    path: ./data
+    path: ./data/NMNIST
     input_size: 34
     channels: 2
     num_classes: 10
     batch_size: 128
-seed: 3
+seed: 42
