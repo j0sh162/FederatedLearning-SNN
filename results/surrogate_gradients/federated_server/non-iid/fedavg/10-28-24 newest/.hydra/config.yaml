@@ -49,4 +49,4 @@ datasets:
     channels: 2
     num_classes: 10
     batch_size: 128
-seed: 42
+seed: 0
