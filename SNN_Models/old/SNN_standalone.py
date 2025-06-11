@@ -136,13 +136,13 @@ for epoch in range(num_epochs):
             break
 
 test_loss, test_acc = test(snn_net, test_loader, device)
-hist.append([epoch, batch_number, test_loss, test_acc, "test"])
+# hist.append([epoch, batch_number, test_loss, test_acc, "test"])
 print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc * 100:.2f}%")
 
-torch.save(
-    snn_net.net.state_dict(),
-    f"runs/SurrogateGradient_centralized/{args.seed}/snn_net.pt",
-)
+# torch.save(
+#     snn_net.net.state_dict(),
+#     f"runs/SurrogateGradient_centralized/{args.seed}/snn_net.pt",
+# )
 
 writer.flush()
 writer.close()
