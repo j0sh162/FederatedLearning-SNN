@@ -9,9 +9,8 @@ from flwr.common import Context, NDArrays, Scalar
 from hydra.utils import instantiate
 from rich.logging import RichHandler
 
-from biograd import biograd_utils
 from FL.training_utils import test, train
-from SNN_Models import EventProp, SNN_utils, Spide
+from SNN_Models import EventProp, SNN_utils,Spide
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -70,17 +69,6 @@ class FlowerClient(fl.client.NumPyClient):
             Spide.train(
                 self.model, self.trainloader, self.device, config["local_epochs"], optim
             )
-        elif (
-            self.model_cfg._target_
-            == "biograd.network_w_biograd.BioGradNetworkWithSleep"
-        ):
-            biograd_utils.train(
-                net=self.model,
-                train_loader=self.trainloader,
-                device=self.device,
-                epochs=config["local_epochs"],
-                optimizer=optim,
-            )
         # elif self.model_cfg._target_ == "FL.CNN.Net":
         #     train(
         #         self.model, self.trainloader, optim, config["local_epochs"], self.device
@@ -96,13 +84,6 @@ class FlowerClient(fl.client.NumPyClient):
             loss, accuracy = EventProp.test(self.model, self.valloader, self.device)
         elif self.model_cfg._target_ == "SNN_Models.Spide.SNNSPIDEConvNet":
             loss, accuracy = Spide.test(self.valloader, self.model, self.device)
-        elif (
-            self.model_cfg._target_
-            == "biograd.network_w_biograd.BioGradNetworkWithSleep"
-        ):
-            loss, accuracy = biograd_utils.test(
-                self.model, self.trainloader, self.device
-            )
         elif self.model_cfg._target_ == "FL.CNN.Net":
             loss, accuracy = test(self.model, self.valloader, self.device)
         return float(loss), len(self.valloader), {"accuracy": accuracy}

@@ -140,7 +140,7 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: C:\Users\Thoma\OneDrive\Documenten\GitHub\FederatedLearning-SNN\outputs\2025-06-10\19-48-23
+    output_dir: C:\Users\Thoma\OneDrive\Documenten\GitHub\FederatedLearning-SNN\outputs\2025-06-10\16-40-29
     choices:
       model: eventprop
       strategy: fedavg
