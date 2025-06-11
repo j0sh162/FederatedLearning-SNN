@@ -111,7 +111,7 @@ def train(model,trainloader,device, epochs, optimizer,warmup=0,logging = False):
     top5 = AverageMeter()
     end = time.time()
     
-    writer = SummaryWriter(f"runs/SurrogateGradient_centralized/spide_seed_{0}") if logging else None
+    writer = SummaryWriter(f"runs/spide_standalone/final_spide_standalone_seed_{0}") if logging else None
     
 
     epoch_losses = []
@@ -134,10 +134,12 @@ def train(model,trainloader,device, epochs, optimizer,warmup=0,logging = False):
             data_time.update(time.time() - end)
 
             # change the dimension of inputs from B*T*C*H*W to B*C*H*W*T
-            inputs = inputs.permute(1, 2, 3, 4, 0)
+            inputs = inputs.permute(0, 2, 3, 4,1)
+            shape = inputs.shape
+            # print(shape)
             # take the first T time steps
             inputs = inputs[:, :, :, :, :model.time_step]
-
+            inputs = inputs.float()
             if device == 'cuda':
                 inputs, targets = inputs.cuda(), targets.cuda()
             inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
@@ -181,7 +183,7 @@ def train(model,trainloader,device, epochs, optimizer,warmup=0,logging = False):
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
-        print(f'loss: {loss}, Accuarcy:{top1.avg}')
+        print(f'loss: {loss}, Accuarcy:{top1.avg}, Epoch:{current_iter}')
     if logging:
         writer.flush()
         writer.close()
@@ -211,7 +213,8 @@ def test(testloader, model, device):
         data_time.update(time.time() - end)
 
         # change the dimension of inputs from B*T*C*H*W to B*C*H*W*T
-        inputs = inputs.permute(1, 2, 3, 4, 0)
+        inputs = inputs.permute(0, 2, 3, 4,1)
+        inputs = inputs.float()
         # take the first T time steps
         inputs = inputs[:, :, :, :, :model.time_step]
 
