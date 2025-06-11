@@ -1,0 +1,4 @@
+filepath,aggregation,method,num_clients
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/standalone/0/events.out.tfevents.1749377982.gcn3.local.snellius.surf.nl.742149.0,Standalone,SG,0
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/standalone/final_spide_standalone_seed_0/events.out.tfevents.1749568867.Joshs-MacBook-Pro.local.56545.0,Standalone,SPIDE,0
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/standalone/events.out.tfevents.1749479823.gcn3.local.snellius.surf.nl.3654921.0,Standalone,EventProp,0

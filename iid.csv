@@ -1,0 +1,17 @@
+filepath,aggregation,method,num_clients
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/federated_server/iid/network-SNN_Models.Spide.SNNSPIDEConvNet_num_clients-5_seed-42/events.out.tfevents.1749461740.Joshs-MacBook-Pro.local.18382.0,FedAvg,SPIDE,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/federated_server/iid/network-SNN_Models.Spide.SNNSPIDEConvNet_num_clients-10_seed-42/events.out.tfevents.1749464573.Joshs-MacBook-Pro.local.18382.1,FedAvg,SPIDE,10
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/federated_server/iid/network-SNN_Models.Spide.SNNSPIDEConvNet_num_clients-20_seed-42/events.out.tfevents.1749468745.Joshs-MacBook-Pro.local.18382.2,FedAvg,SPIDE,20
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/federated_server/iid/fedprox-network-SNN_Models.Spide.SNNSPIDEConvNet_num_clients-10_seed-42/events.out.tfevents.1749474978.Joshs-MacBook-Pro.local.24915.1,FedProx,SPIDE,10
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/federated_server/iid/fedopt-network-iid-SNN_Models.Spide.SNNSPIDEConvNet_num_clients-5_seed-42/events.out.tfevents.1749554701.Joshs-MacBook-Pro.local.48679.0,FedOpt,SPIDE,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/federated_server/iid/fedavg/5 clients/events.out.tfevents.1749585730.LAPTOP-0SF95AIV.16764.0,FedAvg,EventProp,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/federated_server/iid/fedavg/10 clients/events.out.tfevents.1749596045.LAPTOP-0SF95AIV.20044.0,FedAvg,EventProp,10
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/federated_server/iid/fedavg/20 clients/events.out.tfevents.1749447819.LAPTOP-0SF95AIV.16504.2,FedAvg,EventProp,20
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/federated_server/iid/fedopt/events.out.tfevents.1749492728.LAPTOP-0SF95AIV.7004.0,FedOpt,EventProp,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/federated_server/iid/fedprox/events.out.tfevents.1749500854.LAPTOP-0SF95AIV.16352.0,FedProx,EventProp,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/iid/fedavg/clients_5_seed_0/events.out.tfevents.1749381631.PC-RED.32040.0,FedAvg,SG,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/iid/fedavg/clients_10_seed_0/events.out.tfevents.1749386386.PC-RED.34736.0,FedAvg,SG,10
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/iid/fedavg/clients_10_seed_0/events.out.tfevents.1749386386.PC-RED.34736.0,FedAvg,SG,20
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/iid/fedopt/clients_5_seed_0/events.out.tfevents.1749514465.DESKTOP-G0PS9UV.17236.0,FedOpt,SG,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/iid/fedopt/clients_5_seed_0/events.out.tfevents.1749514465.DESKTOP-G0PS9UV.17236.0,FedProx,SG,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/biograd/network:biograd.network_w_biograd.BioGradNetworkWithSleepnum_clients:5seed:0/events.out.tfevents.1749530587.Joshs-MacBook-Pro.local.34437.0,FedAvg,Biograd,5
