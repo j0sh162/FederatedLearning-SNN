@@ -140,10 +140,10 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: C:\Users\czbn2\PycharmProjects\FederatedLearning-SNN\outputs\2025-06-09\22-33-28
+    output_dir: C:\Users\czbn2\PycharmProjects\FederatedLearning-SNN\outputs\2025-06-09\15-18-37
     choices:
-      model: EVENTPROP
-      strategy: fedavg
+      model: SNN
+      strategy: fedprox
       hydra/env: default
       hydra/callbacks: null
       hydra/job_logging: default
