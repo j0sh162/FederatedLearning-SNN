@@ -4,3 +4,5 @@ filepath,aggregation,method,num_clients
 /Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/non-iid/fedopt/clients_5_seed_0/events.out.tfevents.1749428121.DESKTOP-G0PS9UV.22992.0,FedOpt,SG,5
 /Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/federated_server/non-iid/fedavg-network-non-iid-SNN_Models.Spide.SNNSPIDEConvNet_num_clients-5_seed-42/events.out.tfevents.1749490807.Joshs-MacBook-Pro.local.31750.0,FedAvg,SPIDE,5
 /Users/julian/projects/University/Period5/FederatedLearning-SNN/results/spide/federated_server/non-iid/fedprox-network-non-iid-SNN_Models.Spide.SNNSPIDEConvNet_num_clients-5_seed-42/events.out.tfevents.1749483180.Joshs-MacBook-Pro.local.29942.0,FedProx,SPIDE,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/non-iid/fedavg/12-27-25/events.out.tfevents.1749467419.Natalia.23116.0,FedAvg,SG,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/surrogate_gradients/federated_server/non-iid/fedprox/15-18-37/events.out.tfevents.1749477879.Natalia.14888.0,FedProx,SG,5
