@@ -1,0 +1,3 @@
+filepath,aggregation,method,num_clients
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/federated_server/non-iid/fedprox/events.out.tfevents.1749508832.LAPTOP-0SF95AIV.18584.0,fedprox,non-iid,5
+/Users/julian/projects/University/Period5/FederatedLearning-SNN/results/eventprop/federated_server/iid/fedavg/5 clients/events.out.tfevents.1749425014.LAPTOP-0SF95AIV.16504.0,fedavg,iid,5
